@@ -10,7 +10,7 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HashTests
+namespace xxHash3.Core
 {
     public unsafe static class xxHash3
     {
