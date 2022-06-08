@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Managed\Managed.csproj" />
+    <ProjectReference Include="..\Native\Native.csproj" />
   </ItemGroup>
 
 </Project>

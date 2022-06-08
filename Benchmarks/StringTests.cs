@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using xxHash3;
+using xxHash3.Native;
 
 namespace xxHash3.Benchmarks
 {
@@ -50,27 +51,24 @@ namespace xxHash3.Benchmarks
         }
 
         [Benchmark]
+        public ulong StandartXXHash3_128()
+        {
+            var bytes = MemoryMarshal.AsBytes(str.AsSpan());
+            return Standart.Hash.xxHash.xxHash128.ComputeHash(bytes, bytes.Length).low64;
+        }
+
+        [Benchmark]
         public void Wyhash()
         {
             var bytes = MemoryMarshal.AsBytes(str.AsSpan());
             WyHash.WyHash64.ComputeHash64(bytes);
         }
 
-        //[Benchmark]
-        //public unsafe ulong xxh3_64_Native()
-        //{
-        //    fixed (char * ptr = str)
-        //    {
-        //        return xxhNative.XXH3_64bits_withSeed((UIntPtr)ptr, (UIntPtr)(str.Length * 2), seed); 
-        //    }
-        //}
-
-        //[Benchmark]
-        ////public ulong xxh3_64_Managed()
-        ////{
-        ////    var bytes = MemoryMarshal.AsBytes(str.AsSpan());
-        ////    return xxHash3.xxHash3.Hash64(bytes, seed);
-        ////}
+        [Benchmark]
+        public unsafe ulong xxh3_64_Native()
+        {
+            return xxHash3Native.XXH3_64bits_withSeed(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(str.AsSpan())), (UIntPtr)(str.Length * 2), seed); 
+        }
 
         [Benchmark]
         public ulong Xxh3Net()
