@@ -254,10 +254,30 @@ namespace xxHash3.Core
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_mul128_fold64(ulong lhs, ulong rhs)
         {
             ulong lowHalf;
-            ulong highHalf = System.Runtime.Intrinsics.X86.Bmi2.X64.MultiplyNoFlags(lhs, rhs, &lowHalf);
+            ulong highHalf;
+
+            if (Bmi2.X64.IsSupported)
+            {
+                highHalf = Bmi2.X64.MultiplyNoFlags(lhs, rhs, &lowHalf);
+            }
+            else
+            {
+                /* First calculate all of the cross products. */
+                var lo_lo = XXH_mult32to64(lhs & 0xFFFFFFFF, rhs & 0xFFFFFFFF);
+                var hi_lo = XXH_mult32to64(lhs >> 32, rhs & 0xFFFFFFFF);
+                var lo_hi = XXH_mult32to64(lhs & 0xFFFFFFFF, rhs >> 32);
+                var hi_hi = XXH_mult32to64(lhs >> 32, rhs >> 32);
+
+                /* Now add the products together. These will never overflow. */
+                var cross = (lo_lo >> 32) + (hi_lo & 0xFFFFFFFF) + lo_hi;
+                highHalf = (hi_lo >> 32) + (cross >> 32) + hi_hi;
+                lowHalf = (cross << 32) | (lo_lo & 0xFFFFFFFF);
+            }
+
             return lowHalf ^ highHalf;
         }
 
