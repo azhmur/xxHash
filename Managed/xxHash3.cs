@@ -50,15 +50,18 @@ namespace XXHash.Managed
         private const ulong XXH_PRIME32_4 = 0x27D4EB2F;  /*!< 0b00100111110101001110101100101111 */
         private const ulong XXH_PRIME32_5 = 0x165667B1;  /*!< 0b00010110010101100110011110110001 */
 
-        private static readonly Vector128<uint> Prime32 = Vector128.Create((uint)XXH_PRIME32_1);
+        private static readonly Vector128<uint> Prime32_128 = Vector128.Create((uint)XXH_PRIME32_1);
+        private static readonly Vector256<uint> Prime32_256 = Vector256.Create((uint)XXH_PRIME32_1);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static uint GetSecret32(uint index)
         {
             return Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(XXH3_kSecret), index));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong GetSecret64(uint index)
         {
             return Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(XXH3_kSecret), index));
@@ -76,6 +79,7 @@ namespace XXHash.Managed
         }
         */
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_len_0to16_64b(ref byte input, uint len, ulong seed)
         {
             if (len > 8) return XXH3_len_9to16_64b(ref input, len, seed);
@@ -94,7 +98,9 @@ namespace XXHash.Managed
             return h64;
         }
         */
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH64_avalanche(ulong h64)
         {
             h64 ^= h64 >> 33;
@@ -112,7 +118,9 @@ namespace XXHash.Managed
         ////    h64 = XXH_xorshift64(h64, 32);
         ////    return h64;
         ////}
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_avalanche(ulong h64)
         {
             h64 = XXH_xorshift64(h64, 37);
@@ -132,6 +140,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_rrmxmx(ulong h64, uint len)
         {
             h64 ^= BitOperations.RotateLeft(h64, 49) ^ BitOperations.RotateLeft(h64, 24);
@@ -148,6 +157,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH_xorshift64(ulong v64, int shift)
         {
             return v64 ^ (v64 >> shift);
@@ -176,6 +186,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_len_1to3_64b(ref byte input, uint len, ulong seed)
         {
             byte c1 = Unsafe.ReadUnaligned<byte>(ref input);
@@ -205,6 +216,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_len_4to8_64b(ref byte input, uint len, ulong seed)
         {
             seed ^= (ulong)BinaryPrimitives.ReverseEndianness((uint)seed) << 32;
@@ -234,6 +246,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_len_9to16_64b(ref byte input, uint len, ulong seed)
         {
             ulong bitflip1 = (GetSecret64(24) ^ GetSecret64(32)) + seed;
@@ -312,6 +325,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static void XXH3_scalarRound(ref ulong acc, ref byte input, ref ulong secret, uint lane)
         {
             ulong data_val = Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref input, lane * 8));
@@ -343,6 +357,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
         private static void XXH3_accumulate_512_scalar(ref ulong acc, ref byte input, ref ulong secret)
         {
             //for (uint i = 0; i < XXH_ACC_NB; i++)
@@ -381,6 +396,7 @@ namespace XXHash.Managed
         ////    }
         ////}
 
+        [SkipLocalsInit]
         private static void XXH3_accumulate(ref ulong acc, ref byte input, ref ulong secret, uint nbStripes)
         {
             for (uint n = 0; n < nbStripes; n++)
@@ -417,6 +433,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
         private static void XXH3_scalarScrambleRound(ref ulong acc, uint lane, ref ulong secret)
         {
             ulong key64 = Unsafe.Add(ref secret, lane);
@@ -441,6 +458,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
         private static void XXH3_scrambleAcc_scalar(ref ulong acc, ref ulong secret)
         {
             ////for (uint i = 0; i < XXH_ACC_NB; ++i)
@@ -459,9 +477,14 @@ namespace XXHash.Managed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
         private static void XXH3_scrambleAcc(ref ulong acc, ref ulong secret)
         {
-            if (Sse2.IsSupported)
+            if (Avx2.IsSupported)
+            {
+                XXH3_scrambleAcc_avx2(ref acc, ref secret);
+            }
+            else if (Sse2.IsSupported)
             {
                 XXH3_scrambleAcc_sse2(ref acc, ref secret);
             }
@@ -470,7 +493,6 @@ namespace XXHash.Managed
                 XXH3_scrambleAcc_scalar(ref acc, ref secret);
             }
         }
-
 
         ////XXH_FORCE_INLINE XXH64_hash_t
         ////XXH3_64bits_internal(const void* XXH_RESTRICT input, size_t len,
@@ -495,18 +517,21 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         public static ulong XXHash3_64(ReadOnlySpan<byte> data, ulong seed)
         {
             return XXHash3_64(ref MemoryMarshal.GetReference(data), (uint)data.Length, seed);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         public static ulong XXHash3_64(ReadOnlySpan<char> data, ulong seed)
         {
             return XXHash3_64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(data)), (uint)(data.Length * 2), seed);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
         public static ulong XXHash3_64(ref byte input, uint len, ulong seed64)
         {
             if (len <= 16)
@@ -536,9 +561,7 @@ namespace XXHash.Managed
             else
             {
                 Span<ulong> customSecret = stackalloc ulong[(int)XXH_SECRET_DEFAULT_SIZE / sizeof(ulong)];
-                Unsafe.CopyBlockUnaligned(ref Unsafe.As<ulong, byte>(ref MemoryMarshal.GetReference(customSecret)), ref MemoryMarshal.GetReference(XXH3_kSecret), XXH_SECRET_DEFAULT_SIZE);
-                //XXH3_kSecret.CopyTo(MemoryMarshal.Cast<ulong, byte>(customSecret));
-                XXH3_initCustomSecret_scalar(ref MemoryMarshal.GetReference(customSecret), seed64);
+                XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
                 return XXH3_hashLong_64b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret), XXH_SECRET_DEFAULT_SIZE);
             }
         }
@@ -568,6 +591,7 @@ namespace XXHash.Managed
         ////    return XXH3_avalanche(acc);
         ////}
 
+        [SkipLocalsInit]
         private static ulong XXH3_len_17to128_64b(ref byte input, uint len, ulong seed)
         {
             ulong acc = len * XXH_PRIME64_1;
@@ -622,6 +646,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_mix16B(ref byte input, uint secretIndex, ulong seed64)
         {
             var input_lo = Unsafe.ReadUnaligned<ulong>(ref input);
@@ -685,6 +710,7 @@ namespace XXHash.Managed
         ////    }
         ////}
 
+        [SkipLocalsInit]
         private static ulong XXH3_len_129to240_64b(
             ref byte input,
             uint len,
@@ -723,6 +749,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_mix2Accs(ref ulong acc, ref ulong secret)
         {
             return XXH3_mul128_fold64(
@@ -748,8 +775,8 @@ namespace XXHash.Managed
         ////    return XXH3_mergeAccs(acc, (const xxh_u8*)secret + XXH_SECRET_MERGEACCS_START, (xxh_u64)len * XXH_PRIME64_1);
         ////}
 
-        [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_hashLong_64b_internal(ref byte input, uint len, ref ulong secret, uint secretSize)
         {
             Span<ulong> acc = stackalloc ulong[(int)XXH_ACC_NB];
@@ -762,7 +789,6 @@ namespace XXHash.Managed
             
             return XXH3_mergeAccs(ref MemoryMarshal.GetReference(acc), ref Unsafe.AddByteOffset(ref secret, XXH_SECRET_MERGEACCS_START), len * XXH_PRIME64_1);
         }
-
 
         ////XXH_FORCE_INLINE void
         ////XXH3_hashLong_internal_loop(xxh_u64* XXH_RESTRICT acc,
@@ -798,6 +824,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static void XXH3_hashLong_internal_loop(ref ulong acc, ref byte input, uint len, ref ulong secret, uint secretSize)
         {
             uint nbStripesPerBlock = (secretSize - XXH_STRIPE_LEN) / XXH_SECRET_CONSUME_RATE;
@@ -847,6 +874,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         private static ulong XXH3_mergeAccs(ref ulong acc, ref ulong secret, ulong start)
         {
             for (uint i = 0; i < 4; i++)
@@ -926,14 +954,15 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void XXH3_initCustomSecret_scalar(ref ulong customSecret, ulong seed64)
+        [SkipLocalsInit]
+        private static void XXH3_initCustomSecret_scalar(ref ulong basicSecret, ref ulong customSecret, ulong seed64)
         {
             const uint nbRounds = XXH_SECRET_DEFAULT_SIZE / 16;
 
             for (uint i = 0; i < nbRounds; i++)
             {
-                Unsafe.AddByteOffset(ref customSecret, 16 * i) += seed64;
-                Unsafe.AddByteOffset(ref customSecret, 16 * i + 8) -= seed64;
+                Unsafe.AddByteOffset(ref customSecret, 16 * i) = Unsafe.AddByteOffset(ref basicSecret, 16 * i) + seed64;
+                Unsafe.AddByteOffset(ref customSecret, 16 * i + 8) = Unsafe.AddByteOffset(ref basicSecret, 16 * i + 8) - seed64;
             }
         }
 
@@ -974,6 +1003,7 @@ namespace XXHash.Managed
         ////}    
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
         private static unsafe void XXH3_accumulate_512_sse2(ref ulong acc, ref byte input, ref ulong secret)
         {
             const uint blockSize = 16;
@@ -1008,9 +1038,14 @@ namespace XXHash.Managed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
         private static unsafe void XXH3_accumulate_512(ref ulong acc, ref byte input, ref ulong secret)
         {
-            if (Sse2.IsSupported)
+            if (Avx2.IsSupported)
+            {
+                XXH3_accumulate_512_avx2(ref acc, ref input, ref secret);
+            }
+            else if (Sse2.IsSupported)
             {
                 XXH3_accumulate_512_sse2(ref acc, ref input, ref secret);
             }
@@ -1050,6 +1085,7 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
         private static void XXH3_scrambleAcc_sse2(ref ulong acc, ref ulong secret)
         {
             const uint blockSize = 16;
@@ -1070,9 +1106,128 @@ namespace XXHash.Managed
                 var keyVec = Sse2.LoadVector128((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
                 var dataKey = Sse2.Xor(dataVec, keyVec).AsUInt32();
                 var dataKeyHi = Sse2.Shuffle(dataKey, shuffle1);
-                var prodLo = Sse2.Multiply(dataKey, Prime32);
-                var prodHi = Sse2.Multiply(dataKeyHi, Prime32);
+                var prodLo = Sse2.Multiply(dataKey, Prime32_128);
+                var prodHi = Sse2.Multiply(dataKeyHi, Prime32_128);
                 Sse2.Store(accLine, Sse2.Add(prodLo.AsUInt64(), Sse2.ShiftLeftLogical(prodHi, 32)));
+            }
+        }
+
+        ////XXH_FORCE_INLINE XXH_TARGET_AVX2 void
+        ////XXH3_accumulate_512_avx2( void* XXH_RESTRICT acc,
+        ////                    const void* XXH_RESTRICT input,
+        ////                    const void* XXH_RESTRICT secret)
+        ////{
+        ////    XXH_ASSERT((((size_t)acc) & 31) == 0);
+        ////    {   __m256i* const xacc    =       (__m256i *) acc;
+        ////        /* Unaligned. This is mainly for pointer arithmetic, and because
+        ////         * _mm256_loadu_si256 requires  a const __m256i * pointer for some reason. */
+        ////        const         __m256i* const xinput  = (const __m256i *) input;
+        ////        /* Unaligned. This is mainly for pointer arithmetic, and because
+        ////         * _mm256_loadu_si256 requires a const __m256i * pointer for some reason. */
+        ////        const         __m256i* const xsecret = (const __m256i *) secret;
+
+        ////        size_t i;
+        ////        for (i=0; i < XXH_STRIPE_LEN/sizeof(__m256i); i++) {
+        ////            /* data_vec    = xinput[i]; */
+        ////            __m256i const data_vec    = _mm256_loadu_si256    (xinput+i);
+        ////            /* key_vec     = xsecret[i]; */
+        ////            __m256i const key_vec     = _mm256_loadu_si256   (xsecret+i);
+        ////            /* data_key    = data_vec ^ key_vec; */
+        ////            __m256i const data_key    = _mm256_xor_si256     (data_vec, key_vec);
+        ////            /* data_key_lo = data_key >> 32; */
+        ////            __m256i const data_key_lo = _mm256_shuffle_epi32 (data_key, _MM_SHUFFLE(0, 3, 0, 1));
+        ////            /* product     = (data_key & 0xffffffff) * (data_key_lo & 0xffffffff); */
+        ////            __m256i const product     = _mm256_mul_epu32     (data_key, data_key_lo);
+        ////            /* xacc[i] += swap(data_vec); */
+        ////            __m256i const data_swap = _mm256_shuffle_epi32(data_vec, _MM_SHUFFLE(1, 0, 3, 2));
+        ////            __m256i const sum       = _mm256_add_epi64(xacc[i], data_swap);
+        ////            /* xacc[i] += product; */
+        ////            xacc[i] = _mm256_add_epi64(product, sum);
+        ////    }   }
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
+        private static unsafe void XXH3_accumulate_512_avx2(ref ulong acc, ref byte input, ref ulong secret)
+        {
+            const uint blockSize = 32;
+            const byte shuffle1 = (((0) << 6) | ((3) << 4) | ((0) << 2) | ((1)));
+            const byte shuffle2 = (((1) << 6) | ((0) << 4) | ((3) << 2) | ((2)));
+
+
+            Round(ref acc, ref input, ref secret, 0);
+            Round(ref acc, ref input, ref secret, 1);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            [SkipLocalsInit]
+            static void Round(ref ulong acc, ref byte input, ref ulong secret, uint i)
+            {
+                var dataVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref input, i * blockSize)));
+                var keyVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
+                var dataKey = Avx2.Xor(dataVec, keyVec).AsUInt32();
+                var dataKeyLo = Avx2.Shuffle(dataKey, shuffle1);
+                var product = Avx2.Multiply(dataKey, dataKeyLo);
+                var data_swap = Avx2.Shuffle(dataVec.AsUInt32(), shuffle2).AsUInt64();
+                var accLine = (ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref acc, i * blockSize));
+                var xacc = Avx2.LoadVector256(accLine);
+                var sum = Avx2.Add(xacc, data_swap);
+                var sum2 = Avx2.Add(product, sum);
+                Avx2.Store(accLine, sum2);
+            }
+        }
+
+        ////XXH_FORCE_INLINE XXH_TARGET_AVX2 void
+        ////XXH3_scrambleAcc_avx2(void* XXH_RESTRICT acc, const void* XXH_RESTRICT secret)
+        ////{
+        ////    XXH_ASSERT((((size_t)acc) & 31) == 0);
+        ////    {   __m256i* const xacc = (__m256i*) acc;
+        ////        /* Unaligned. This is mainly for pointer arithmetic, and because
+        ////         * _mm256_loadu_si256 requires a const __m256i * pointer for some reason. */
+        ////        const         __m256i* const xsecret = (const __m256i *) secret;
+        ////        const __m256i prime32 = _mm256_set1_epi32((int)XXH_PRIME32_1);
+
+        ////        size_t i;
+        ////        for (i=0; i < XXH_STRIPE_LEN/sizeof(__m256i); i++) {
+        ////            /* xacc[i] ^= (xacc[i] >> 47) */
+        ////            __m256i const acc_vec     = xacc[i];
+        ////            __m256i const shifted     = _mm256_srli_epi64    (acc_vec, 47);
+        ////            __m256i const data_vec    = _mm256_xor_si256     (acc_vec, shifted);
+        ////            /* xacc[i] ^= xsecret; */
+        ////            __m256i const key_vec     = _mm256_loadu_si256   (xsecret+i);
+        ////            __m256i const data_key    = _mm256_xor_si256     (data_vec, key_vec);
+
+        ////            /* xacc[i] *= XXH_PRIME32_1; */
+        ////            __m256i const data_key_hi = _mm256_shuffle_epi32 (data_key, _MM_SHUFFLE(0, 3, 0, 1));
+        ////            __m256i const prod_lo     = _mm256_mul_epu32     (data_key, prime32);
+        ////            __m256i const prod_hi     = _mm256_mul_epu32     (data_key_hi, prime32);
+        ////            xacc[i] = _mm256_add_epi64(prod_lo, _mm256_slli_epi64(prod_hi, 32));
+        ////        }
+        ////    }
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [SkipLocalsInit]
+        private static void XXH3_scrambleAcc_avx2(ref ulong acc, ref ulong secret)
+        {
+            const uint blockSize = 32;
+            const byte shuffle1 = (((0) << 6) | ((3) << 4) | ((0) << 2) | ((1)));
+
+            Round(ref acc, ref secret, 0);
+            Round(ref acc, ref secret, 1);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            static void Round(ref ulong acc, ref ulong secret, uint i)
+            {
+                var accLine = (ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref acc, i * blockSize));
+                var accVec = Avx2.LoadVector256(accLine);
+                var shifted = Avx2.ShiftRightLogical(accVec, 47);
+                var dataVec = Avx2.Xor(accVec, shifted);
+                var keyVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
+                var dataKey = Avx2.Xor(dataVec, keyVec).AsUInt32();
+                var dataKeyHi = Avx2.Shuffle(dataKey, shuffle1);
+                var prodLo = Avx2.Multiply(dataKey, Prime32_256);
+                var prodHi = Avx2.Multiply(dataKeyHi, Prime32_256);
+                Avx2.Store(accLine, Avx2.Add(prodLo.AsUInt64(), Avx2.ShiftLeftLogical(prodHi, 32)));
             }
         }
     }
