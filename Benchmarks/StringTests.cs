@@ -17,7 +17,7 @@ namespace XXHash.Benchmarks
     {
         private static readonly ulong seed = unchecked((ulong)Random.Shared.NextInt64());
 
-        [Params(1,2,3,4,5/*,6,7,8,9,10,11,12,13,14,15,16,51200*/)]
+        [Params(/*1,2,*/3/*,4,5,6,7,8,9,10,11,12,13,14,15,16,51200*/)]
         public int length;
 
         public string str;
@@ -31,81 +31,85 @@ namespace XXHash.Benchmarks
             str = Encoding.ASCII.GetString(bytes);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void StringGetHashCode()
         {
-            var v = str.GetHashCode();
+            var hash = str.GetHashCode();
         }
 
         [Benchmark]
-        public ulong K4osXXhash64()
+        public void K4osXXhash64()
         {
-            return K4os.Hash.xxHash.XXH64.DigestOf(MemoryMarshal.AsBytes(str.AsSpan()));
+            var hash = K4os.Hash.xxHash.XXH64.DigestOf(MemoryMarshal.AsBytes(str.AsSpan()));
         }
 
         [Benchmark]
-        public ulong StandartXXHash()
-        {
-            var bytes = MemoryMarshal.AsBytes(str.AsSpan());
-            return Standart.Hash.xxHash.xxHash64.ComputeHash(bytes, bytes.Length);
-        }
-
-        [Benchmark]
-        public ulong StandartXXHash3_128()
+        public void StandartXXHash()
         {
             var bytes = MemoryMarshal.AsBytes(str.AsSpan());
-            return Standart.Hash.xxHash.xxHash128.ComputeHash(bytes, bytes.Length).low64;
+            var hash = Standart.Hash.xxHash.xxHash64.ComputeHash(bytes, bytes.Length);
+        }
+
+        [Benchmark]
+        public void StandartXXHash3_128()
+        {
+            var bytes = MemoryMarshal.AsBytes(str.AsSpan());
+            var hash = Standart.Hash.xxHash.xxHash128.ComputeHash(bytes, bytes.Length).low64;
         }
 
         [Benchmark]
         public void Wyhash()
         {
-            var bytes = MemoryMarshal.AsBytes(str.AsSpan());
-            WyHash.WyHash64.ComputeHash64(bytes);
+            var hash = WyHash.WyHash64.ComputeHash64(MemoryMarshal.AsBytes(str.AsSpan()));
         }
 
         [Benchmark]
-        public unsafe ulong xxh3_64_Native()
+        public void xxh3_64_Native()
         {
-            return XXHashNative.XXHash3_64(str, seed); 
+            var hash = XXHashNative.XXHash3_64(str, seed); 
         }
 
         [Benchmark]
-        public unsafe ulong xxh3_128_Native()
+        public void xxh3_128_Native()
         {
-            return XXHashNative.XXHash3_128(str, seed).low64;
+            var hash = XXHashNative.XXHash3_128(str, seed).low64;
         }
 
         [Benchmark]
-        public ulong Xxh3Net()
+        public void Xxh3Net()
         {
-            return XXHash3NET.XXHash3.Hash64(MemoryMarshal.Cast<char, byte>(str.AsSpan()), seed); 
+            var hash = XXHash3NET.XXHash3.Hash64(MemoryMarshal.Cast<char, byte>(str.AsSpan()), seed); 
         }
 
         [Benchmark(Baseline = true)]
-        public unsafe ulong Xxh3_NewManaged()
+        public void Xxh3_NewManaged()
         {
-            return XXHash3.XXHash3_64(str, seed);
+            var hash = XXHash3.XXHash3_64(str, seed);
         }
 
         //[Benchmark]
-        public unsafe void HashCodeAddBytes()
+        public void HashCodeAddBytes()
         {
             var hashCode = new HashCode();
             hashCode.AddBytes(MemoryMarshal.AsBytes(str.AsSpan()));
-            hashCode.ToHashCode();
+            var hash = hashCode.ToHashCode();
         }
 
-        //[Benchmark]
-        public unsafe int GetNonRandomizedHashCode()
+        [Benchmark]
+        public void GetNonRandomizedHashCode()
         {
-            fixed (char* src = this.str)
+            var hash = GetNonRandomizedHashCode(this.str);
+        }
+
+        private static unsafe int GetNonRandomizedHashCode(string str)
+        {
+            fixed (char* src = str)
             {
                 uint hash1 = (5381 << 16) + 5381;
                 uint hash2 = hash1;
 
                 uint* ptr = (uint*)src;
-                int length = this.str.Length;
+                int length = str.Length;
 
                 while (length > 2)
                 {

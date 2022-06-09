@@ -10,6 +10,8 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 
+[module: SkipLocalsInit]
+
 namespace XXHash.Managed
 {
     public unsafe static class XXHash3
@@ -54,14 +56,12 @@ namespace XXHash.Managed
         private static readonly Vector256<uint> Prime32_256 = Vector256.Create((uint)XXH_PRIME32_1);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static uint GetSecret32(uint index)
         {
             return Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(XXH3_kSecret), index));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong GetSecret64(uint index)
         {
             return Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(XXH3_kSecret), index));
@@ -78,8 +78,7 @@ namespace XXHash.Managed
             }
         }
         */
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_len_0to16_64b(ref byte input, uint len, ulong seed)
         {
             if (len > 8) return XXH3_len_9to16_64b(ref input, len, seed);
@@ -99,8 +98,7 @@ namespace XXHash.Managed
         }
         */
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static ulong XXH64_avalanche(ulong h64)
         {
             h64 ^= h64 >> 33;
@@ -120,7 +118,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong XXH3_avalanche(ulong h64)
         {
             h64 = XXH_xorshift64(h64, 37);
@@ -140,7 +137,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong XXH3_rrmxmx(ulong h64, uint len)
         {
             h64 ^= BitOperations.RotateLeft(h64, 49) ^ BitOperations.RotateLeft(h64, 24);
@@ -157,7 +153,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong XXH_xorshift64(ulong v64, int shift)
         {
             return v64 ^ (v64 >> shift);
@@ -185,8 +180,7 @@ namespace XXHash.Managed
         ////    }
         ////}
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_len_1to3_64b(ref byte input, uint len, ulong seed)
         {
             byte c1 = Unsafe.ReadUnaligned<byte>(ref input);
@@ -215,8 +209,7 @@ namespace XXHash.Managed
         ////    }
         ////}
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_len_4to8_64b(ref byte input, uint len, ulong seed)
         {
             seed ^= (ulong)BinaryPrimitives.ReverseEndianness((uint)seed) << 32;
@@ -245,8 +238,7 @@ namespace XXHash.Managed
         ////    }
         ////}
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_len_9to16_64b(ref byte input, uint len, ulong seed)
         {
             ulong bitflip1 = (GetSecret64(24) ^ GetSecret64(32)) + seed;
@@ -267,7 +259,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong XXH3_mul128_fold64(ulong lhs, ulong rhs)
         {
             ulong lowHalf;
@@ -325,7 +316,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static void XXH3_scalarRound(ref ulong acc, ref byte input, ref ulong secret, uint lane)
         {
             ulong data_val = Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref input, lane * 8));
@@ -357,7 +347,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static void XXH3_accumulate_512_scalar(ref ulong acc, ref byte input, ref ulong secret)
         {
             //for (uint i = 0; i < XXH_ACC_NB; i++)
@@ -396,7 +385,7 @@ namespace XXHash.Managed
         ////    }
         ////}
 
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static void XXH3_accumulate(ref ulong acc, ref byte input, ref ulong secret, uint nbStripes)
         {
             for (uint n = 0; n < nbStripes; n++)
@@ -433,7 +422,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static void XXH3_scalarScrambleRound(ref ulong acc, uint lane, ref ulong secret)
         {
             ulong key64 = Unsafe.Add(ref secret, lane);
@@ -458,7 +446,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static void XXH3_scrambleAcc_scalar(ref ulong acc, ref ulong secret)
         {
             ////for (uint i = 0; i < XXH_ACC_NB; ++i)
@@ -477,7 +464,6 @@ namespace XXHash.Managed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static void XXH3_scrambleAcc(ref ulong acc, ref ulong secret)
         {
             if (Avx2.IsSupported)
@@ -517,19 +503,18 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong XXHash3_64(ReadOnlySpan<byte> data, ulong seed = 0)
+        public static ulong XXHash3_64(ReadOnlySpan<byte> data, ulong seed)
         {
             return XXHash3_64(ref MemoryMarshal.GetReference(data), (uint)data.Length, seed);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong XXHash3_64(ReadOnlySpan<char> data, ulong seed = 0)
+        public static ulong XXHash3_64(ReadOnlySpan<char> data, ulong seed)
         {
             return XXHash3_64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(data)), (uint)(data.Length * 2), seed);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         public static ulong XXHash3_64(ref byte input, uint len, ulong seed64)
         {
             if (len <= 16)
@@ -549,7 +534,6 @@ namespace XXHash.Managed
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        [SkipLocalsInit]
         private static ulong XXH3_long(ref byte input, uint len, ulong seed64)
         {
             if (seed64 == 0)
@@ -589,7 +573,7 @@ namespace XXHash.Managed
         ////    return XXH3_avalanche(acc);
         ////}
 
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_len_17to128_64b(ref byte input, uint len, ulong seed)
         {
             ulong acc = len * XXH_PRIME64_1;
@@ -644,7 +628,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong XXH3_mix16B(ref byte input, uint secretIndex, ulong seed64)
         {
             var input_lo = Unsafe.ReadUnaligned<ulong>(ref input);
@@ -708,7 +691,7 @@ namespace XXHash.Managed
         ////    }
         ////}
 
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static ulong XXH3_len_129to240_64b(
             ref byte input,
             uint len,
@@ -747,7 +730,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong XXH3_mix2Accs(ref ulong acc, ref ulong secret)
         {
             return XXH3_mul128_fold64(
@@ -774,7 +756,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong XXH3_hashLong_64b_internal(ref byte input, uint len, ref ulong secret, uint secretSize)
         {
             Span<ulong> acc = stackalloc ulong[(int)XXH_ACC_NB];
@@ -821,8 +802,7 @@ namespace XXHash.Managed
         ////    }   }
         ////}
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static void XXH3_hashLong_internal_loop(ref ulong acc, ref byte input, uint len, ref ulong secret, uint secretSize)
         {
             uint nbStripesPerBlock = (secretSize - XXH_STRIPE_LEN) / XXH_SECRET_CONSUME_RATE;
@@ -872,7 +852,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static ulong XXH3_mergeAccs(ref ulong acc, ref ulong secret, ulong start)
         {
             for (uint i = 0; i < 4; i++)
@@ -952,7 +931,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
         private static void XXH3_initCustomSecret_scalar(ref ulong basicSecret, ref ulong customSecret, ulong seed64)
         {
             const uint nbRounds = XXH_SECRET_DEFAULT_SIZE / 16;
@@ -1001,7 +979,6 @@ namespace XXHash.Managed
         ////}    
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static unsafe void XXH3_accumulate_512_sse2(ref ulong acc, ref byte input, ref ulong secret)
         {
             const uint blockSize = 16;
@@ -1036,7 +1013,6 @@ namespace XXHash.Managed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static unsafe void XXH3_accumulate_512(ref ulong acc, ref byte input, ref ulong secret)
         {
             if (Avx2.IsSupported)
@@ -1083,7 +1059,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static void XXH3_scrambleAcc_sse2(ref ulong acc, ref ulong secret)
         {
             const uint blockSize = 16;
@@ -1145,7 +1120,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static unsafe void XXH3_accumulate_512_avx2(ref ulong acc, ref byte input, ref ulong secret)
         {
             const uint blockSize = 32;
@@ -1157,7 +1131,6 @@ namespace XXHash.Managed
             Round(ref acc, ref input, ref secret, 1);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-            [SkipLocalsInit]
             static void Round(ref ulong acc, ref byte input, ref ulong secret, uint i)
             {
                 var dataVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref input, i * blockSize)));
@@ -1204,7 +1177,6 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        [SkipLocalsInit]
         private static void XXH3_scrambleAcc_avx2(ref ulong acc, ref ulong secret)
         {
             const uint blockSize = 32;
