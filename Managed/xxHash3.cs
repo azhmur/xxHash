@@ -517,15 +517,13 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
-        public static ulong XXHash3_64(ReadOnlySpan<byte> data, ulong seed)
+        public static ulong XXHash3_64(ReadOnlySpan<byte> data, ulong seed = 0)
         {
             return XXHash3_64(ref MemoryMarshal.GetReference(data), (uint)data.Length, seed);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SkipLocalsInit]
-        public static ulong XXHash3_64(ReadOnlySpan<char> data, ulong seed)
+        public static ulong XXHash3_64(ReadOnlySpan<char> data, ulong seed = 0)
         {
             return XXHash3_64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(data)), (uint)(data.Length * 2), seed);
         }
