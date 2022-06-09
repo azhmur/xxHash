@@ -1,8 +1,8 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace xxHash3.Native
+namespace XXHash.Native
 {
-    public static class xxHash3Native
+    internal static class Native
     {
         [DllImport("xxhash")]
         [SuppressGCTransition]

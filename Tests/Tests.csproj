@@ -5,18 +5,15 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>XXHash.Benchmarks</RootNamespace>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <AssemblyName>XXHash.Tests</AssemblyName>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
+    <PackageReference Include="Extensions.Data.xxHash.core20" Version="1.0.2.1" />
     <PackageReference Include="K4os.Hash.xxHash" Version="1.0.7" />
     <PackageReference Include="Standart.Hash.xxHash" Version="4.0.1" />
-    <PackageReference Include="WyHash" Version="1.0.4" />
+    <PackageReference Include="System.Data.HashFunction.xxHash" Version="2.0.0" />
     <PackageReference Include="XXHash3.NET" Version="1.2.2" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Managed\Managed.csproj" />
     <ProjectReference Include="..\Native\Native.csproj" />

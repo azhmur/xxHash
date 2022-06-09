@@ -8,10 +8,10 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using xxHash3;
-using xxHash3.Native;
+using XXHash.Managed;
+using XXHash.Native;
 
-namespace xxHash3.Benchmarks
+namespace XXHash.Benchmarks
 {
     public class StringTests
     {
@@ -67,7 +67,13 @@ namespace xxHash3.Benchmarks
         [Benchmark]
         public unsafe ulong xxh3_64_Native()
         {
-            return xxHash3Native.XXH3_64bits_withSeed(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(str.AsSpan())), (UIntPtr)(str.Length * 2), seed); 
+            return XXHashNative.XXHash3_64(str, seed); 
+        }
+
+        [Benchmark]
+        public unsafe ulong xxh3_128_Native()
+        {
+            return XXHashNative.XXHash3_128(str, seed).low64;
         }
 
         [Benchmark]
@@ -79,7 +85,7 @@ namespace xxHash3.Benchmarks
         [Benchmark(Baseline = true)]
         public unsafe ulong Xxh3_NewManaged()
         {
-            return Core.xxHash3.XXH3(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(str.AsSpan())), (uint)str.Length * 2, seed);
+            return XXHash3.XXHash3_64(str, seed);
         }
 
         //[Benchmark]

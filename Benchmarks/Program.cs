@@ -2,7 +2,7 @@
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
-using xxHash3.Benchmarks;
+using XXHash.Benchmarks;
 
 BenchmarkRunner.Run<StringTests>(DefaultConfig.Instance.AddJob(Job.ShortRun
     .WithEnvironmentVariable("DOTNET_TieredPGO", "0")).WithSummaryStyle(BenchmarkDotNet.Reports.SummaryStyle.Default.WithRatioStyle(RatioStyle.Percentage)));

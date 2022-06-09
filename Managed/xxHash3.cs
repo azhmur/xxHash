@@ -10,9 +10,9 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace xxHash3.Core
+namespace XXHash.Managed
 {
-    public unsafe static class xxHash3
+    public unsafe static class XXHash3
     {
         private const uint XXH_STRIPE_LEN = 64;
         private const uint XXH_SECRET_CONSUME_RATE = 8;
@@ -76,7 +76,7 @@ namespace xxHash3.Core
         }
         */
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong XXH3_len_0to16_64b(ref byte input, uint len, ulong seed)
+        private static ulong XXH3_len_0to16_64b(ref byte input, uint len, ulong seed)
         {
             if (len > 8) return XXH3_len_9to16_64b(ref input, len, seed);
             if (len >= 4) return XXH3_len_4to8_64b(ref input, len, seed);
@@ -494,8 +494,20 @@ namespace xxHash3.Core
         ////    return f_hashLong(input, len, seed64, (const xxh_u8*)secret, secretLen);
         ////}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong XXHash3_64(ReadOnlySpan<byte> data, ulong seed)
+        {
+            return XXHash3_64(ref MemoryMarshal.GetReference(data), (uint)data.Length, seed);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong XXHash3_64(ReadOnlySpan<char> data, ulong seed)
+        {
+            return XXHash3_64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(data)), (uint)(data.Length * 2), seed);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public static ulong XXH3(ref byte input, uint len, ulong seed64)
+        public static ulong XXHash3_64(ref byte input, uint len, ulong seed64)
         {
             if (len <= 16)
             {
@@ -515,7 +527,7 @@ namespace xxHash3.Core
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         [SkipLocalsInit]
-        public static ulong XXH3_long(ref byte input, uint len, ulong seed64)
+        private static ulong XXH3_long(ref byte input, uint len, ulong seed64)
         {
             if (seed64 == 0)
             {

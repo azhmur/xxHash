@@ -4,10 +4,13 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageId>xxHash3.Native</PackageId>
-    <Version>8.1.2.1</Version>
+    <PackageId>XXHash.Native</PackageId>
+    <Version>8.1.2.0</Version>
     <RepositoryUrl>https://github.com/azhmur/xxHash3</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RootNamespace>XXHash.Native</RootNamespace>
+    <AssemblyName>XXHash.Native</AssemblyName>
+    <PackageTags>xxHash, xxHash3, xxHash64, xxHash32, xxHash128</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <Content CopyToOutputDirectory="PreserveNewest" Include="xxhash.dll" Link="xxhash.dll" Pack="true" PackagePath="runtimes/windows-x64/native/xxhash.dll" />
