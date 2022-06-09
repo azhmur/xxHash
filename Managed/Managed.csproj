@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <PackageId>XXHash.Managed</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Anatoly Zhmur</Authors>
     <Product />
     <Description>Managed implementation of xxHash3 algorithm with support of intrinstics.</Description>
