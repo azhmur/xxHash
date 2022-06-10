@@ -17,7 +17,7 @@ namespace XXHash.Benchmarks
     {
         private static readonly ulong seed = unchecked((ulong)Random.Shared.NextInt64());
 
-        [Params(/*1,2,*/3/*,4,5,6,7,8,9,10,11,12,13,14,15,16,51200*/)]
+        [Params(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,51200)]
         public int length;
 
         public string str;
@@ -99,6 +99,12 @@ namespace XXHash.Benchmarks
         public void GetNonRandomizedHashCode()
         {
             var hash = GetNonRandomizedHashCode(this.str);
+        }
+
+        [Benchmark]
+        public void SystemXXHash64()
+        {
+            var hash = System.IO.Hashing.XxHash64.Hash(MemoryMarshal.AsBytes(str.AsSpan()), (long)seed);
         }
 
         private static unsafe int GetNonRandomizedHashCode(string str)
