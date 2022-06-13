@@ -17,7 +17,7 @@ namespace XXHash.Benchmarks
     {
         private static readonly ulong seed = unchecked((ulong)Random.Shared.NextInt64());
 
-        [Params(1,2,3,4,5,6,7,8,9,/*10,11,12,13,14,15,16,*/51200)]
+        [Params(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,51200)]
         public int length;
 
         public string str;
