@@ -16,6 +16,7 @@
     <AssemblyName>XXHash.Managed</AssemblyName>
     <RootNamespace>XXHash.Managed</RootNamespace>
     <PackageTags>xxHash, xxHash3, xxHash3_64</PackageTags>
+    <EmbedAllSources>true</EmbedAllSources>
   </PropertyGroup>
 
 </Project>

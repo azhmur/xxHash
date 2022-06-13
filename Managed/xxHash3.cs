@@ -16,57 +16,6 @@ namespace XXHash.Managed
 {
     public unsafe static class XXHash3
     {
-        private const uint XXH_STRIPE_LEN = 64;
-        private const uint XXH_SECRET_CONSUME_RATE = 8;
-        private const uint XXH_ACC_NB = XXH_STRIPE_LEN / sizeof(ulong);
-        private const uint XXH3_SECRET_SIZE_MIN = 136;
-        private const uint XXH_SECRET_DEFAULT_SIZE = 192;
-
-
-        private static ReadOnlySpan<byte> XXH3_kSecret => new byte[] {
-            0xb8, 0xfe, 0x6c, 0x39, 0x23, 0xa4, 0x4b, 0xbe, 0x7c, 0x01, 0x81, 0x2c, 0xf7, 0x21, 0xad, 0x1c,
-            0xde, 0xd4, 0x6d, 0xe9, 0x83, 0x90, 0x97, 0xdb, 0x72, 0x40, 0xa4, 0xa4, 0xb7, 0xb3, 0x67, 0x1f,
-            0xcb, 0x79, 0xe6, 0x4e, 0xcc, 0xc0, 0xe5, 0x78, 0x82, 0x5a, 0xd0, 0x7d, 0xcc, 0xff, 0x72, 0x21,
-            0xb8, 0x08, 0x46, 0x74, 0xf7, 0x43, 0x24, 0x8e, 0xe0, 0x35, 0x90, 0xe6, 0x81, 0x3a, 0x26, 0x4c,
-            0x3c, 0x28, 0x52, 0xbb, 0x91, 0xc3, 0x00, 0xcb, 0x88, 0xd0, 0x65, 0x8b, 0x1b, 0x53, 0x2e, 0xa3,
-            0x71, 0x64, 0x48, 0x97, 0xa2, 0x0d, 0xf9, 0x4e, 0x38, 0x19, 0xef, 0x46, 0xa9, 0xde, 0xac, 0xd8,
-            0xa8, 0xfa, 0x76, 0x3f, 0xe3, 0x9c, 0x34, 0x3f, 0xf9, 0xdc, 0xbb, 0xc7, 0xc7, 0x0b, 0x4f, 0x1d,
-            0x8a, 0x51, 0xe0, 0x4b, 0xcd, 0xb4, 0x59, 0x31, 0xc8, 0x9f, 0x7e, 0xc9, 0xd9, 0x78, 0x73, 0x64,
-            0xea, 0xc5, 0xac, 0x83, 0x34, 0xd3, 0xeb, 0xc3, 0xc5, 0x81, 0xa0, 0xff, 0xfa, 0x13, 0x63, 0xeb,
-            0x17, 0x0d, 0xdd, 0x51, 0xb7, 0xf0, 0xda, 0x49, 0xd3, 0x16, 0x55, 0x26, 0x29, 0xd4, 0x68, 0x9e,
-            0x2b, 0x16, 0xbe, 0x58, 0x7d, 0x47, 0xa1, 0xfc, 0x8f, 0xf8, 0xb8, 0xd1, 0x7a, 0xd0, 0x31, 0xce,
-            0x45, 0xcb, 0x3a, 0x8f, 0x95, 0x16, 0x04, 0x28, 0xaf, 0xd7, 0xfb, 0xca, 0xbb, 0x4b, 0x40, 0x7e,
-        };
-
-        private static ReadOnlySpan<ulong> XXH3_INIT_ACC => new ulong[] { XXH_PRIME32_3, XXH_PRIME64_1, XXH_PRIME64_2, XXH_PRIME64_3, XXH_PRIME64_4, XXH_PRIME32_2, XXH_PRIME64_5, XXH_PRIME32_1};
-
-        private const ulong XXH_PRIME64_1 = 0x9E3779B185EBCA87; /*!< 0b1001111000110111011110011011000110000101111010111100101010000111 */
-        private const ulong XXH_PRIME64_2 = 0xC2B2AE3D27D4EB4F; /*!< 0b1100001010110010101011100011110100100111110101001110101101001111 */
-        private const ulong XXH_PRIME64_3 = 0x165667B19E3779F9; /*!< 0b0001011001010110011001111011000110011110001101110111100111111001 */
-        private const ulong XXH_PRIME64_4 = 0x85EBCA77C2B2AE63; /*!< 0b1000010111101011110010100111011111000010101100101010111001100011 */
-        private const ulong XXH_PRIME64_5 = 0x27D4EB2F165667C5; /*!< 0b0010011111010100111010110010111100010110010101100110011111000101 */
-
-        private const ulong XXH_PRIME32_1 = 0x9E3779B1;  /*!< 0b10011110001101110111100110110001 */
-        private const ulong XXH_PRIME32_2 = 0x85EBCA77;  /*!< 0b10000101111010111100101001110111 */
-        private const ulong XXH_PRIME32_3 = 0xC2B2AE3D;  /*!< 0b11000010101100101010111000111101 */
-        private const ulong XXH_PRIME32_4 = 0x27D4EB2F;  /*!< 0b00100111110101001110101100101111 */
-        private const ulong XXH_PRIME32_5 = 0x165667B1;  /*!< 0b00010110010101100110011110110001 */
-
-        private static readonly Vector128<uint> Prime32_128 = Vector128.Create((uint)XXH_PRIME32_1);
-        private static readonly Vector256<uint> Prime32_256 = Vector256.Create((uint)XXH_PRIME32_1);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint GetSecret32(uint index)
-        {
-            return Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(XXH3_kSecret), index));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ulong GetSecret64(uint index)
-        {
-            return Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference(XXH3_kSecret), index));
-        }
-
         /*XXH_FORCE_INLINE XXH_PUREF XXH64_hash_t
         XXH3_len_0to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
         {
@@ -84,29 +33,7 @@ namespace XXHash.Managed
             if (len > 8) return XXH3_len_9to16_64b(ref input, len, seed);
             if (len >= 4) return XXH3_len_4to8_64b(ref input, len, seed);
             if (len != 0) return XXH3_len_1to3_64b(ref input, len, seed);
-            return XXH64_avalanche(seed);
-        }
-
-        /*static xxh_u64 XXH64_avalanche(xxh_u64 h64)
-        {
-            h64 ^= h64 >> 33;
-            h64 *= XXH_PRIME64_2;
-            h64 ^= h64 >> 29;
-            h64 *= XXH_PRIME64_3;
-            h64 ^= h64 >> 32;
-            return h64;
-        }
-        */
-
-        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-        private static ulong XXH64_avalanche(ulong h64)
-        {
-            h64 ^= h64 >> 33;
-            h64 *= XXH_PRIME64_2;
-            h64 ^= h64 >> 29;
-            h64 *= XXH_PRIME64_3;
-            h64 ^= h64 >> 32;
-            return h64;
+            return XXHashShared.XXH64_avalanche(seed ^ XXHashShared.GetSecret64(56) ^ XXHashShared.GetSecret64(64));
         }
 
         ////static XXH64_hash_t XXH3_avalanche(xxh_u64 h64)
@@ -188,9 +115,9 @@ namespace XXHash.Managed
             byte c3 = Unsafe.ReadUnaligned<byte>(ref Unsafe.AddByteOffset(ref input, len - 1));
 
             uint combined = ((uint)c1 << 16) | ((uint)c2 << 24) | ((uint)c3 << 0) | ((uint)len << 8);
-            ulong bitflip = (GetSecret32(0) ^ GetSecret32(4)) + seed;
+            ulong bitflip = (XXHashShared.GetSecret32(0) ^ XXHashShared.GetSecret32(4)) + seed;
             ulong keyed = (ulong)combined ^ bitflip;
-            return XXH64_avalanche(keyed);
+            return XXHashShared.XXH64_avalanche(keyed);
         }
 
         ////XXH_FORCE_INLINE XXH_PUREF XXH64_hash_t
@@ -215,7 +142,7 @@ namespace XXHash.Managed
             seed ^= (ulong)BinaryPrimitives.ReverseEndianness((uint)seed) << 32;
             uint input1 = Unsafe.ReadUnaligned<uint>(ref input);
             uint input2 = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref input, len - 4));
-            ulong bitflip = (GetSecret64(8) ^ GetSecret64(16)) - seed;
+            ulong bitflip = (XXHashShared.GetSecret64(8) ^ XXHashShared.GetSecret64(16)) - seed;
             ulong input64 = input2 + (((ulong)input1) << 32);
             ulong keyed = input64 ^ bitflip;
             return XXH3_rrmxmx(keyed, len);
@@ -241,8 +168,8 @@ namespace XXHash.Managed
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_len_9to16_64b(ref byte input, uint len, ulong seed)
         {
-            ulong bitflip1 = (GetSecret64(24) ^ GetSecret64(32)) + seed;
-            ulong bitflip2 = (GetSecret64(40) ^ GetSecret64(48)) - seed;
+            ulong bitflip1 = (XXHashShared.GetSecret64(24) ^ XXHashShared.GetSecret64(32)) + seed;
+            ulong bitflip2 = (XXHashShared.GetSecret64(40) ^ XXHashShared.GetSecret64(48)) - seed;
             ulong input_lo = Unsafe.ReadUnaligned<ulong>(ref input) ^ bitflip1;
             ulong input_hi = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input, len - 8)) ^ bitflip2;
             ulong acc = len
@@ -390,8 +317,8 @@ namespace XXHash.Managed
         {
             for (uint n = 0; n < nbStripes; n++)
             {
-                ref byte inp = ref Unsafe.AddByteOffset(ref input, n * XXH_STRIPE_LEN);
-                XXH3_accumulate_512(ref acc, ref inp, ref Unsafe.AddByteOffset(ref secret, n * XXH_SECRET_CONSUME_RATE));
+                ref byte inp = ref Unsafe.AddByteOffset(ref input, n * XXHashShared.XXH_STRIPE_LEN);
+                XXH3_accumulate_512(ref acc, ref inp, ref Unsafe.AddByteOffset(ref secret, n * XXHashShared.XXH_SECRET_CONSUME_RATE));
             }
         }
 
@@ -428,7 +355,7 @@ namespace XXHash.Managed
             ulong acc64 = Unsafe.Add(ref acc, lane);
             acc64 = XXH_xorshift64(acc64, 47);
             acc64 ^= key64;
-            acc64 *= XXH_PRIME32_1;
+            acc64 *= XXHashShared.XXH_PRIME32_1;
             Unsafe.Add(ref acc, lane) = acc64;
         }
 
@@ -503,19 +430,19 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong XXHash3_64(ReadOnlySpan<byte> data, ulong seed)
+        public static ulong XXH3_64(ReadOnlySpan<byte> data, ulong seed)
         {
-            return XXHash3_64(ref MemoryMarshal.GetReference(data), (uint)data.Length, seed);
+            return XXH3_64(ref MemoryMarshal.GetReference(data), (uint)data.Length, seed);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong XXHash3_64(ReadOnlySpan<char> data, ulong seed)
+        public static ulong XXH3_64(ReadOnlySpan<char> data, ulong seed)
         {
-            return XXHash3_64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(data)), (uint)(data.Length * 2), seed);
+            return XXH3_64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(data)), (uint)(data.Length * 2), seed);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-        public static ulong XXHash3_64(ref byte input, uint len, ulong seed64)
+        private static ulong XXH3_64(ref byte input, uint len, ulong seed64)
         {
             if (len <= 16)
             {
@@ -538,13 +465,13 @@ namespace XXHash.Managed
         {
             if (seed64 == 0)
             {
-                return XXH3_hashLong_64b_internal(ref input, len, ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXH3_kSecret)), XXH_SECRET_DEFAULT_SIZE);
+                return XXH3_hashLong_64b_internal(ref input, len, ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), XXHashShared.XXH_SECRET_DEFAULT_SIZE);
             }
             else
             {
-                Span<ulong> customSecret = stackalloc ulong[(int)XXH_SECRET_DEFAULT_SIZE / sizeof(ulong)];
-                XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
-                return XXH3_hashLong_64b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret), XXH_SECRET_DEFAULT_SIZE);
+                Span<ulong> customSecret = stackalloc ulong[(int)XXHashShared.XXH_SECRET_DEFAULT_SIZE / sizeof(ulong)];
+                XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
+                return XXH3_hashLong_64b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret), XXHashShared.XXH_SECRET_DEFAULT_SIZE);
             }
         }
 
@@ -576,7 +503,7 @@ namespace XXHash.Managed
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_len_17to128_64b(ref byte input, uint len, ulong seed)
         {
-            ulong acc = len * XXH_PRIME64_1;
+            ulong acc = len * XXHashShared.XXH_PRIME64_1;
             if (len > 32) {
                 if (len > 64) {
                     if (len > 96) {
@@ -634,8 +561,8 @@ namespace XXHash.Managed
             var input_hi = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input, 8));
 
             return XXH3_mul128_fold64(
-                input_lo ^ (GetSecret64(secretIndex) + seed64),
-                input_hi ^ (GetSecret64(secretIndex + 8) - seed64));
+                input_lo ^ (XXHashShared.GetSecret64(secretIndex) + seed64),
+                input_hi ^ (XXHashShared.GetSecret64(secretIndex + 8) - seed64));
         }
 
         ////XXH_NO_INLINE XXH_PUREF XXH64_hash_t
@@ -700,7 +627,7 @@ namespace XXHash.Managed
             const int XXH3_MIDSIZE_STARTOFFSET = 3;
             const int XXH3_MIDSIZE_LASTOFFSET = 17;
 
-            ulong acc = len * XXH_PRIME64_1;
+            ulong acc = len * XXHashShared.XXH_PRIME64_1;
             int nbRounds = (int)len / 16;
 
             for (uint i = 0; i < 8; i++) 
@@ -716,7 +643,7 @@ namespace XXHash.Managed
             }
 
             /* last bytes */
-            acc += XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 16), XXH3_SECRET_SIZE_MIN - XXH3_MIDSIZE_LASTOFFSET, seed);
+            acc += XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 16), XXHashShared.XXH3_SECRET_SIZE_MIN - XXH3_MIDSIZE_LASTOFFSET, seed);
             return XXH3_avalanche(acc);
         }
 
@@ -758,15 +685,15 @@ namespace XXHash.Managed
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_hashLong_64b_internal(ref byte input, uint len, ref ulong secret, uint secretSize)
         {
-            Span<ulong> acc = stackalloc ulong[(int)XXH_ACC_NB];
+            Span<ulong> acc = stackalloc ulong[(int)XXHashShared.XXH_ACC_NB];
 
-            XXH3_INIT_ACC.CopyTo(acc);
+            XXHashShared.XXH3_INIT_ACC.CopyTo(acc);
 
             XXH3_hashLong_internal_loop(ref MemoryMarshal.GetReference(acc), ref input, len, ref secret, secretSize);
             
             const uint XXH_SECRET_MERGEACCS_START = 11;
             
-            return XXH3_mergeAccs(ref MemoryMarshal.GetReference(acc), ref Unsafe.AddByteOffset(ref secret, XXH_SECRET_MERGEACCS_START), len * XXH_PRIME64_1);
+            return XXH3_mergeAccs(ref MemoryMarshal.GetReference(acc), ref Unsafe.AddByteOffset(ref secret, XXH_SECRET_MERGEACCS_START), len * XXHashShared.XXH_PRIME64_1);
         }
 
         ////XXH_FORCE_INLINE void
@@ -805,23 +732,23 @@ namespace XXHash.Managed
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static void XXH3_hashLong_internal_loop(ref ulong acc, ref byte input, uint len, ref ulong secret, uint secretSize)
         {
-            uint nbStripesPerBlock = (secretSize - XXH_STRIPE_LEN) / XXH_SECRET_CONSUME_RATE;
-            uint block_len = XXH_STRIPE_LEN * nbStripesPerBlock;
+            uint nbStripesPerBlock = (secretSize - XXHashShared.XXH_STRIPE_LEN) / XXHashShared.XXH_SECRET_CONSUME_RATE;
+            uint block_len = XXHashShared.XXH_STRIPE_LEN * nbStripesPerBlock;
             uint nb_blocks = (len - 1) / block_len;
 
             for (var n = 0; n < nb_blocks; n++)
             {
                 XXH3_accumulate(ref acc, ref Unsafe.AddByteOffset(ref input, (nuint)n * block_len), ref secret, nbStripesPerBlock);
-                XXH3_scrambleAcc(ref acc, ref Unsafe.AddByteOffset(ref secret, secretSize - XXH_STRIPE_LEN));
+                XXH3_scrambleAcc(ref acc, ref Unsafe.AddByteOffset(ref secret, secretSize - XXHashShared.XXH_STRIPE_LEN));
             }
 
-            uint nbStripes = ((len - 1) - (block_len * nb_blocks)) / XXH_STRIPE_LEN;
+            uint nbStripes = ((len - 1) - (block_len * nb_blocks)) / XXHashShared.XXH_STRIPE_LEN;
             XXH3_accumulate(ref acc, ref Unsafe.AddByteOffset(ref input, nb_blocks * block_len), ref secret, nbStripes);
 
             /* last stripe */
-            ref byte p = ref Unsafe.AddByteOffset(ref input, len - XXH_STRIPE_LEN);
+            ref byte p = ref Unsafe.AddByteOffset(ref input, len - XXHashShared.XXH_STRIPE_LEN);
             const int XXH_SECRET_LASTACC_START = 7; /* not aligned on 8, last secret is different from acc & scrambler */
-            XXH3_accumulate_512(ref acc, ref p, ref Unsafe.AddByteOffset(ref secret, secretSize - XXH_STRIPE_LEN - XXH_SECRET_LASTACC_START));
+            XXH3_accumulate_512(ref acc, ref p, ref Unsafe.AddByteOffset(ref secret, secretSize - XXHashShared.XXH_STRIPE_LEN - XXH_SECRET_LASTACC_START));
         }
 
         ////static XXH64_hash_t
@@ -933,7 +860,7 @@ namespace XXHash.Managed
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void XXH3_initCustomSecret_scalar(ref ulong basicSecret, ref ulong customSecret, ulong seed64)
         {
-            const uint nbRounds = XXH_SECRET_DEFAULT_SIZE / 16;
+            const uint nbRounds = XXHashShared.XXH_SECRET_DEFAULT_SIZE / 16;
 
             for (uint i = 0; i < nbRounds; i++)
             {
@@ -1079,8 +1006,8 @@ namespace XXHash.Managed
                 var keyVec = Sse2.LoadVector128((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
                 var dataKey = Sse2.Xor(dataVec, keyVec).AsUInt32();
                 var dataKeyHi = Sse2.Shuffle(dataKey, shuffle1);
-                var prodLo = Sse2.Multiply(dataKey, Prime32_128);
-                var prodHi = Sse2.Multiply(dataKeyHi, Prime32_128);
+                var prodLo = Sse2.Multiply(dataKey, XXHashShared.Prime32_128);
+                var prodHi = Sse2.Multiply(dataKeyHi, XXHashShared.Prime32_128);
                 Sse2.Store(accLine, Sse2.Add(prodLo.AsUInt64(), Sse2.ShiftLeftLogical(prodHi, 32)));
             }
         }
@@ -1195,8 +1122,8 @@ namespace XXHash.Managed
                 var keyVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
                 var dataKey = Avx2.Xor(dataVec, keyVec).AsUInt32();
                 var dataKeyHi = Avx2.Shuffle(dataKey, shuffle1);
-                var prodLo = Avx2.Multiply(dataKey, Prime32_256);
-                var prodHi = Avx2.Multiply(dataKeyHi, Prime32_256);
+                var prodLo = Avx2.Multiply(dataKey, XXHashShared.Prime32_256);
+                var prodHi = Avx2.Multiply(dataKeyHi, XXHashShared.Prime32_256);
                 Avx2.Store(accLine, Avx2.Add(prodLo.AsUInt64(), Avx2.ShiftLeftLogical(prodHi, 32)));
             }
         }

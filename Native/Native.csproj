@@ -11,6 +11,7 @@
     <RootNamespace>XXHash.Native</RootNamespace>
     <AssemblyName>XXHash.Native</AssemblyName>
     <PackageTags>xxHash, xxHash3, xxHash64, xxHash32, xxHash128</PackageTags>
+    <EmbedAllSources>true</EmbedAllSources>
   </PropertyGroup>
   <ItemGroup>
     <Content CopyToOutputDirectory="PreserveNewest" Include="xxhash.dll" Link="xxhash.dll" Pack="true" PackagePath="runtimes/windows-x64/native/xxhash.dll" />

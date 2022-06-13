@@ -6,23 +6,23 @@ namespace XXHash.Native
     {
         [DllImport("xxhash")]
         [SuppressGCTransition]
+        public extern static ushort XXH_versionNumber();
+
+        [DllImport("xxhash")]
+        [SuppressGCTransition]
+        public extern static uint XXH32(ref byte input, UIntPtr length, uint seed);
+
+        [DllImport("xxhash")]
+        [SuppressGCTransition]
+        public extern static ulong XXH64(ref byte input, UIntPtr length, ulong seed);
+
+        [DllImport("xxhash")]
+        [SuppressGCTransition]
         public extern static ulong XXH3_64bits(ref byte data, UIntPtr length);
 
         [DllImport("xxhash")]
         [SuppressGCTransition]
         public extern static ulong XXH3_64bits_withSeed(ref byte data, UIntPtr length, ulong seed);
-
-        [DllImport("xxhash")]
-        [SuppressGCTransition]
-        public extern static ushort XXH_versionNumber();
-
-        [DllImport("xxhash")]
-        [SuppressGCTransition]
-        public extern static ulong XXH64(ref byte input, UIntPtr length, ulong seed);
-        
-        [DllImport("xxhash")]
-        [SuppressGCTransition]
-        public extern static uint XXH32(ref byte input, UIntPtr length, uint seed);
 
         [DllImport("xxhash")]
         [SuppressGCTransition]
