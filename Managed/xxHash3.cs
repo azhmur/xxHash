@@ -9,6 +9,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.Intrinsics.Arm.AdvSimd;
 
 [module: SkipLocalsInit]
 
@@ -194,6 +195,11 @@ namespace XXHash.Managed
             if (Bmi2.X64.IsSupported)
             {
                 highHalf = Bmi2.X64.MultiplyNoFlags(lhs, rhs, &lowHalf);
+            }
+            else if (Arm64.IsSupported)
+            {
+                lowHalf = lhs * rhs;
+                highHalf = Arm64.MultiplyHigh(lhs, rhs);
             }
             else
             {
