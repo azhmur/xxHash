@@ -1,5 +1,5 @@
 # xxHash3
-Fastest (2022-06-13) NET implementation of Yan Collets XXHash64 and XXHash3_64 hash functions.
+Fastest (2022-06-14) C#/NET implementation of Yan Collets XXHash64 and XXHash3_64 hash functions.
 
 Nuget packets:
 

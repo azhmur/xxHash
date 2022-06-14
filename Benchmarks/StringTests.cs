@@ -44,10 +44,17 @@ namespace XXHash.Benchmarks
         }
 
         [Benchmark]
-        public void StandartXXHash()
+        public void StandartXXHash64()
         {
             var bytes = MemoryMarshal.AsBytes(str.AsSpan());
             var hash = Standart.Hash.xxHash.xxHash64.ComputeHash(bytes, bytes.Length);
+        }
+
+        [Benchmark]
+        public void StandartXXHash3()
+        {
+            var bytes = MemoryMarshal.AsBytes(str.AsSpan());
+            var hash = Standart.Hash.xxHash.xxHash3.ComputeHash(bytes, bytes.Length);
         }
 
         //[Benchmark]
