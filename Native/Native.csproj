@@ -5,13 +5,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>XXHash.Native</PackageId>
-    <Version>8.1.2.0</Version>
-    <RepositoryUrl>https://github.com/azhmur/xxHash3</RepositoryUrl>
+    <Version>8.1.2.1</Version>
+    <RepositoryUrl>https://github.com/azhmur/xxHash</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RootNamespace>XXHash.Native</RootNamespace>
     <AssemblyName>XXHash.Native</AssemblyName>
-    <PackageTags>xxHash, xxHash3, xxHash64, xxHash32, xxHash128</PackageTags>
+    <Description>xxHash native libraries built for window-x64 and linux-x64</Description>
+    <PackageTags>xxHash, xxHash3, xxHash64, xxHash32, xxHash3_128</PackageTags>
     <EmbedAllSources>true</EmbedAllSources>
+    <DebugType>Embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
     <Content CopyToOutputDirectory="PreserveNewest" Include="xxhash.dll" Link="xxhash.dll" Pack="true" PackagePath="runtimes/windows-x64/native/xxhash.dll" />
