@@ -11,10 +11,9 @@ using System.Text;
 using System.Threading.Tasks;
 using static System.Runtime.Intrinsics.Arm.AdvSimd;
 
-[module: SkipLocalsInit]
-
 namespace XXHash.Managed
 {
+    [SkipLocalsInit]
     public unsafe static class XXHash3
     {
         /*XXH_FORCE_INLINE XXH_PUREF XXH64_hash_t
