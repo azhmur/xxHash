@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -12,10 +14,43 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace XXHash.Managed
 {
-    public class BloomFilter
+    public sealed class BloomFilter
     {
         public static readonly Vector256<int> Multipliers = Vector256.Create(0x00000001, unchecked((int)0x9e3779b9), unchecked((int)0xe35e67b1), 0x734297e9, 0x35fbe861, unchecked((int)0xdeb7c719), 0x448b211, 0x3459b749);
         public static readonly Vector256<int> ZeroToSeven = Vector256.Create(0, 1, 2, 3, 4, 5, 6, 7);
+
+        private readonly byte[] data;
+        private readonly int numerOfProbes;
+
+        public BloomFilter(int millibitsPerKey, int sizeInBytes)
+        {
+            this.data = new byte[sizeInBytes];
+            this.numerOfProbes = ChooseNumProbes(millibitsPerKey);
+        }
+
+        public void AddHash(string str)
+        {
+            var (hash1, hash2) = GetHash(str);
+
+            AddHash(hash1, hash2);
+        }
+
+        public void AddHash(uint h1, uint h2)
+        {
+            AddHash(h1, h2, (uint)this.data.Length, this.numerOfProbes, ref MemoryMarshal.GetArrayDataReference(this.data));
+        }
+
+        public bool HashMayMatch(string str)
+        {
+            var (hash1, hash2) = GetHash(str);
+
+            return HashMayMatch(hash1, hash2);
+        }
+
+        public bool HashMayMatch(uint h1, uint h2)
+        {
+            return HashMayMatch(h1, h2, (uint)this.data.Length, this.numerOfProbes, ref MemoryMarshal.GetArrayDataReference(this.data));
+        }
 
         // False positive rate of a standard Bloom filter, for given ratio of
         // filter memory bits to added keys, and number of probes per operation.
@@ -235,6 +270,18 @@ namespace XXHash.Managed
             _ => (millibits_per_key - 1) / 2000 - 1
         };
 
+        /*static inline void AddHash(uint32_t h1, uint32_t h2, uint32_t len_bytes,
+            int num_probes, char *data) {
+            uint32_t bytes_to_cache_line = FastRange32(len_bytes >> 6, h1) << 6;
+            AddHashPrepared(h2, num_probes, data + bytes_to_cache_line);
+        }*/
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void AddHash(uint h1, uint h2, uint len_bytes, int num_probes, ref byte data)
+        {
+            var bytes_to_cache_line = FastRange32(len_bytes >> 6, h1) << 6;
+            AddHashPrepared(h2, num_probes, ref Unsafe.Add(ref data, bytes_to_cache_line));
+        }
 
         /*static inline void AddHashPrepared(uint32_t h2, int num_probes,
                                            char* data_at_cache_line)
@@ -251,10 +298,12 @@ namespace XXHash.Managed
         static void AddHashPrepared(uint h2, int num_probes, ref byte data_at_cache_line)
         {
             uint h = h2;
-            for (int i = 0; i < num_probes; ++i, h *= 0x9e3779b9) 
+            for (int i = 0; i < num_probes; ++i) 
             {
                 uint bitpos = h >> (32 - 9);
-                Unsafe.WriteUnaligned(ref Unsafe.Add(ref data_at_cache_line, bitpos >> 3), (byte)(1 << (byte)(bitpos & 7)));
+                ref var data = ref Unsafe.Add(ref data_at_cache_line, bitpos >> 3);
+                data |= (byte)(1 << (byte)(bitpos & 7));
+                h *= 0x9e3779b9;
             }
         }
 
@@ -422,16 +471,16 @@ namespace XXHash.Managed
             {
                 for (int i = 0; i < num_probes; ++i)
                 {
-                    h *= 0x9e3779b9;
-
                     int bitpos = (int)(h >> (32 - 9));
 
                     if ((Unsafe.Add(ref data_at_cache_line, bitpos >> 3) & (1 << (bitpos & 7))) == 0)
                     {
                         return false;
                     }
+
+                    h *= 0x9e3779b9;
                 }
-                
+
                 return true;
             }
             else
@@ -442,8 +491,8 @@ namespace XXHash.Managed
                     var hash_vector = Vector256.Create((int)h);
                     hash_vector = Avx2.MultiplyLow(hash_vector, Multipliers);
                     var word_addresses = Avx2.ShiftRightLogical(hash_vector, 28);
-                    var lower = Avx2.LoadVector256((int *)Unsafe.AsPointer(ref data_at_cache_line));
-                    var upper = Avx2.LoadVector256((int *)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref data_at_cache_line, 32)));
+                    var lower = Avx2.LoadVector256((int*)Unsafe.AsPointer(ref data_at_cache_line));
+                    var upper = Avx2.LoadVector256((int*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref data_at_cache_line, 32)));
                     lower = Avx2.PermuteVar8x32(lower, word_addresses);
                     upper = Avx2.PermuteVar8x32(upper, word_addresses);
                     var upper_lower_selector = Avx2.ShiftRightArithmetic(hash_vector, 31);
@@ -453,7 +502,7 @@ namespace XXHash.Managed
                     bit_addresses = Avx2.ShiftRightLogical(bit_addresses, 27);
                     var bit_mask = Avx2.ShiftLeftLogicalVariable(k_selector, bit_addresses.AsUInt32());
                     var match = Avx.TestC(value_vector, bit_mask);
-                    
+
                     if (rem_probes <= 8)
                     {
                         return match;
@@ -467,6 +516,15 @@ namespace XXHash.Managed
                     rem_probes -= 8;
                 }
             }
+        }
+
+        static (uint hash1, uint hash2) GetHash(string str)
+        {
+            var hash64 = XXHash3.XXH3_64(str, 0);
+            var hash1 = (uint)hash64;
+            var hash2 = (uint)(hash64 >> 32);
+
+            return (hash1, hash2);
         }
     }
 }

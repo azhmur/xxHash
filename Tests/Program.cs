@@ -1,4 +1,5 @@
 ﻿using System.Data.HashFunction.xxHash;
+using XXHash.Managed;
 
 namespace XXHash.Tests
 {
@@ -6,7 +7,7 @@ namespace XXHash.Tests
     {
         static void Main(string[] args)
         {
-            Validate();
+            BloomFilter();
         }
 
         static void RandomTest()
@@ -56,6 +57,17 @@ namespace XXHash.Tests
             }
 
             Console.WriteLine("Validation succeded");
+        }
+
+        static void BloomFilter()
+        {
+            var bloomFilter = new BloomFilter(5000, 20);
+            bloomFilter.AddHash("xxx");
+            bloomFilter.AddHash("yyy");
+
+            Console.WriteLine(bloomFilter.HashMayMatch("xxx"));
+            Console.WriteLine(bloomFilter.HashMayMatch("xxx1"));
+            Console.WriteLine(bloomFilter.HashMayMatch("yyy"));
         }
     }
 }
