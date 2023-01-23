@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -1132,6 +1134,81 @@ namespace XXHash.Managed
                 var prodHi = Avx2.Multiply(dataKeyHi, XXHashShared.Prime32_256);
                 Avx2.Store(accLine, Avx2.Add(prodLo.AsUInt64(), Avx2.ShiftLeftLogical(prodHi, 32)));
             }
+        }
+
+        /////*
+        //// * Assumption: `secret` size is >= XXH3_SECRET_SIZE_MIN
+        //// */
+        ////XXH_FORCE_INLINE XXH_PUREF XXH128_hash_t
+        ////XXH3_len_0to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
+        ////{
+        ////    XXH_ASSERT(len <= 16);
+        ////    {   if (len > 8) return XXH3_len_9to16_128b(input, len, secret, seed);
+        ////        if (len >= 4) return XXH3_len_4to8_128b(input, len, secret, seed);
+        ////        if (len) return XXH3_len_1to3_128b(input, len, secret, seed);
+        ////        {   XXH128_hash_t h128;
+        ////            xxh_u64 const bitflipl = XXH_readLE64(secret+64) ^ XXH_readLE64(secret+72);
+        ////            xxh_u64 const bitfliph = XXH_readLE64(secret+80) ^ XXH_readLE64(secret+88);
+        ////            h128.low64 = XXH64_avalanche(seed ^ bitflipl);
+        ////            h128.high64 = XXH64_avalanche( seed ^ bitfliph);
+        ////            return h128;
+        ////    }   }
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        XXH128Hash XXH3_len_0to16_128b(ref byte input, uint len, ref byte secret, ulong seed)
+        {
+
+        }
+
+        ////XXH_FORCE_INLINE XXH_PUREF XXH128_hash_t
+        ////XXH3_len_1to3_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
+        ////{
+        ////    /* A doubled version of 1to3_64b with different constants. */
+        ////    XXH_ASSERT(input != NULL);
+        ////        XXH_ASSERT(1 <= len && len <= 3);
+        ////        XXH_ASSERT(secret != NULL);
+        ////    /*
+        ////     * len = 1: combinedl = { input[0], 0x01, input[0], input[0] }
+        ////     * len = 2: combinedl = { input[1], 0x02, input[0], input[1] }
+        ////     * len = 3: combinedl = { input[2], 0x03, input[0], input[1] }
+        ////     */
+        ////    {   xxh_u8 const c1 = input[0];
+        ////        xxh_u8 const c2 = input[len >> 1];
+        ////        xxh_u8 const c3 = input[len - 1];
+        ////        xxh_u32 const combinedl = ((xxh_u32)c1 << 16) | ((xxh_u32)c2 << 24)
+        ////                                | ((xxh_u32)c3 << 0) | ((xxh_u32)len << 8);
+        ////        xxh_u32 const combinedh = XXH_rotl32(XXH_swap32(combinedl), 13);
+        ////        xxh_u64 const bitflipl = (XXH_readLE32(secret) ^ XXH_readLE32(secret + 4)) + seed;
+        ////        xxh_u64 const bitfliph = (XXH_readLE32(secret + 8) ^ XXH_readLE32(secret + 12)) - seed;
+        ////        xxh_u64 const keyed_lo = (xxh_u64)combinedl ^ bitflipl;
+        ////        xxh_u64 const keyed_hi = (xxh_u64)combinedh ^ bitfliph;
+        ////        XXH128_hash_t h128;
+        ////        h128.low64  = XXH64_avalanche(keyed_lo);
+        ////        h128.high64 = XXH64_avalanche(keyed_hi);
+        ////        return h128;
+        ////    }
+        ////}
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static XXH128Hash XXH3_len_1to3_128b(ref byte input, uint len, ref byte secret, ulong seed)
+        {
+            byte c1 = input;
+            byte c2 = Unsafe.AddByteOffset(ref input, len >> 1);
+            byte c3 = Unsafe.AddByteOffset(ref input, len - 1);
+
+            uint combinedl = ((uint)c1 << 16) | ((uint)c2 << 24) | ((uint)c3 << 0) | ((uint)len << 8);
+            uint combinedh = BitOperations.RotateLeft(BinaryPrimitives.ReverseEndianness(combinedl), 13);
+            ulong bitflipl = (XXHashShared.GetSecret32(0) ^ XXHashShared.GetSecret32(4)) + seed;
+            ulong bitfliph = (XXHashShared.GetSecret32(8) ^ XXHashShared.GetSecret32(12)) - seed;
+            ulong keyed_lo = (ulong)combinedl ^ bitflipl;
+            ulong keyed_hi = (ulong)combinedh ^ bitfliph;
+
+            return new XXH128Hash()
+            {
+                High = XXHashShared.XXH64_avalanche(keyed_hi),
+                Low = XXHashShared.XXH64_avalanche(keyed_lo)
+            };
         }
     }
 }
