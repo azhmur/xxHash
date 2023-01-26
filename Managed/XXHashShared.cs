@@ -1,10 +1,13 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+using static System.Runtime.Intrinsics.Arm.ArmBase;
 
 namespace XXHash.Managed
 {
-    public static class XXHashShared
+    public static unsafe class XXHashShared
     {
         public const uint XXH_STRIPE_LEN = 64;
         public const uint XXH_SECRET_CONSUME_RATE = 8;
@@ -75,6 +78,117 @@ namespace XXHash.Managed
             h64 *= XXHashShared.XXH_PRIME64_3;
             h64 ^= h64 >> 32;
             return h64;
+        }
+
+        ////static xxh_u64
+        ////XXH3_mul128_fold64(xxh_u64 lhs, xxh_u64 rhs)
+        ////{
+        ////    XXH128_hash_t product = XXH_mult64to128(lhs, rhs);
+        ////    return product.low64 ^ product.high64;
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong XXH3_mul128_fold64(ulong lhs, ulong rhs)
+        {
+            var hash128 = XXH3_mul128(lhs, rhs);
+            return hash128.Low ^ hash128.High;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static XXH128Hash XXH3_mul128(ulong lhs, ulong rhs)
+        {
+            ulong lowHalf;
+            ulong highHalf;
+
+            if (Bmi2.X64.IsSupported)
+            {
+                highHalf = Bmi2.X64.MultiplyNoFlags(lhs, rhs, &lowHalf);
+            }
+            else if (Arm64.IsSupported)
+            {
+                lowHalf = lhs * rhs;
+                highHalf = Arm64.MultiplyHigh(lhs, rhs);
+            }
+            else
+            {
+                /* First calculate all of the cross products. */
+                var lo_lo = XXH_mult32to64(lhs & 0xFFFFFFFF, rhs & 0xFFFFFFFF);
+                var hi_lo = XXH_mult32to64(lhs >> 32, rhs & 0xFFFFFFFF);
+                var lo_hi = XXH_mult32to64(lhs & 0xFFFFFFFF, rhs >> 32);
+                var hi_hi = XXH_mult32to64(lhs >> 32, rhs >> 32);
+
+                /* Now add the products together. These will never overflow. */
+                var cross = (lo_lo >> 32) + (hi_lo & 0xFFFFFFFF) + lo_hi;
+                highHalf = (hi_lo >> 32) + (cross >> 32) + hi_hi;
+                lowHalf = (cross << 32) | (lo_lo & 0xFFFFFFFF);
+            }
+
+            return new XXH128Hash()
+            {
+                Low = lowHalf,
+                High = highHalf
+            };
+        }
+
+        ////XXH_FORCE_INLINE xxh_u64
+        ////XXH_mult32to64(xxh_u64 x, xxh_u64 y)
+        ////{
+        ////    return (x & 0xFFFFFFFF) * (y & 0xFFFFFFFF);
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong XXH_mult32to64(ulong x, ulong y)
+        {
+            return (x & 0xFFFFFFFF) * (y & 0xFFFFFFFF);
+        }
+
+        ////static XXH64_hash_t XXH3_avalanche(xxh_u64 h64)
+        ////{
+        ////    h64 = XXH_xorshift64(h64, 37);
+        ////    h64 *= 0x165667919E3779F9ULL;
+        ////    h64 = XXH_xorshift64(h64, 32);
+        ////    return h64;
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong XXH3_avalanche(ulong h64)
+        {
+            h64 = XXH_xorshift64(h64, 37);
+            h64 *= 0x165667919E3779F9;
+            h64 = XXH_xorshift64(h64, 32);
+            return h64;
+        }
+
+        ////static XXH64_hash_t XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len)
+        ////{
+        ////    /* this mix is inspired by Pelle Evensen's rrmxmx */
+        ////    h64 ^= XXH_rotl64(h64, 49) ^ XXH_rotl64(h64, 24);
+        ////    h64 *= 0x9FB21C651E98DF25ULL;
+        ////    h64 ^= (h64 >> 35) + len;
+        ////    h64 *= 0x9FB21C651E98DF25ULL;
+        ////    return XXH_xorshift64(h64, 28);
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong XXH3_rrmxmx(ulong h64, uint len)
+        {
+            h64 ^= BitOperations.RotateLeft(h64, 49) ^ BitOperations.RotateLeft(h64, 24);
+            h64 *= 0x9FB21C651E98DF25;
+            h64 ^= (h64 >> 35) + len;
+            h64 *= 0x9FB21C651E98DF25;
+            return XXH_xorshift64(h64, 28);
+        }
+
+        ////XXH_FORCE_INLINE XXH_CONSTF xxh_u64 XXH_xorshift64(xxh_u64 v64, int shift)
+        ////{
+        ////    XXH_ASSERT(0 <= shift && shift < 64);
+        ////    return v64 ^ (v64 >> shift);
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong XXH_xorshift64(ulong v64, int shift)
+        {
+            return v64 ^ (v64 >> shift);
         }
     }
 }

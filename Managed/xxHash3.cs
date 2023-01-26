@@ -39,55 +39,6 @@ namespace XXHash.Managed
             return XXHashShared.XXH64_avalanche(seed ^ XXHashShared.GetSecret64(56) ^ XXHashShared.GetSecret64(64));
         }
 
-        ////static XXH64_hash_t XXH3_avalanche(xxh_u64 h64)
-        ////{
-        ////    h64 = XXH_xorshift64(h64, 37);
-        ////    h64 *= 0x165667919E3779F9ULL;
-        ////    h64 = XXH_xorshift64(h64, 32);
-        ////    return h64;
-        ////}
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ulong XXH3_avalanche(ulong h64)
-        {
-            h64 = XXH_xorshift64(h64, 37);
-            h64 *= 0x165667919E3779F9;
-            h64 = XXH_xorshift64(h64, 32);
-            return h64;
-        }
-
-        ////static XXH64_hash_t XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len)
-        ////{
-        ////    /* this mix is inspired by Pelle Evensen's rrmxmx */
-        ////    h64 ^= XXH_rotl64(h64, 49) ^ XXH_rotl64(h64, 24);
-        ////    h64 *= 0x9FB21C651E98DF25ULL;
-        ////    h64 ^= (h64 >> 35) + len;
-        ////    h64 *= 0x9FB21C651E98DF25ULL;
-        ////    return XXH_xorshift64(h64, 28);
-        ////}
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ulong XXH3_rrmxmx(ulong h64, uint len)
-        {
-            h64 ^= BitOperations.RotateLeft(h64, 49) ^ BitOperations.RotateLeft(h64, 24);
-            h64 *= 0x9FB21C651E98DF25;
-            h64 ^= (h64 >> 35) + len;
-            h64 *= 0x9FB21C651E98DF25;
-            return XXH_xorshift64(h64, 28);
-        }
-
-        ////XXH_FORCE_INLINE XXH_CONSTF xxh_u64 XXH_xorshift64(xxh_u64 v64, int shift)
-        ////{
-        ////    XXH_ASSERT(0 <= shift && shift < 64);
-        ////    return v64 ^ (v64 >> shift);
-        ////}
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ulong XXH_xorshift64(ulong v64, int shift)
-        {
-            return v64 ^ (v64 >> shift);
-        }
-
         ////XXH_FORCE_INLINE XXH_PUREF XXH64_hash_t
         ////XXH3_len_1to3_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
         ////{
@@ -148,7 +99,7 @@ namespace XXHash.Managed
             ulong bitflip = (XXHashShared.GetSecret64(8) ^ XXHashShared.GetSecret64(16)) - seed;
             ulong input64 = input2 + (((ulong)input1) << 32);
             ulong keyed = input64 ^ bitflip;
-            return XXH3_rrmxmx(keyed, len);
+            return XXHashShared.XXH3_rrmxmx(keyed, len);
         }
 
         ////XXH_FORCE_INLINE XXH_PUREF XXH64_hash_t
@@ -177,58 +128,8 @@ namespace XXHash.Managed
             ulong input_hi = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input, len - 8)) ^ bitflip2;
             ulong acc = len
                 + BinaryPrimitives.ReverseEndianness(input_lo) + input_hi
-                + XXH3_mul128_fold64(input_lo, input_hi);
-            return XXH3_avalanche(acc);
-        }
-
-        ////static xxh_u64
-        ////XXH3_mul128_fold64(xxh_u64 lhs, xxh_u64 rhs)
-        ////{
-        ////    XXH128_hash_t product = XXH_mult64to128(lhs, rhs);
-        ////    return product.low64 ^ product.high64;
-        ////}
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ulong XXH3_mul128_fold64(ulong lhs, ulong rhs)
-        {
-            ulong lowHalf;
-            ulong highHalf;
-
-            if (Bmi2.X64.IsSupported)
-            {
-                highHalf = Bmi2.X64.MultiplyNoFlags(lhs, rhs, &lowHalf);
-            }
-            else if (Arm64.IsSupported)
-            {
-                lowHalf = lhs * rhs;
-                highHalf = Arm64.MultiplyHigh(lhs, rhs);
-            }
-            else
-            {
-                /* First calculate all of the cross products. */
-                var lo_lo = XXH_mult32to64(lhs & 0xFFFFFFFF, rhs & 0xFFFFFFFF);
-                var hi_lo = XXH_mult32to64(lhs >> 32, rhs & 0xFFFFFFFF);
-                var lo_hi = XXH_mult32to64(lhs & 0xFFFFFFFF, rhs >> 32);
-                var hi_hi = XXH_mult32to64(lhs >> 32, rhs >> 32);
-
-                /* Now add the products together. These will never overflow. */
-                var cross = (lo_lo >> 32) + (hi_lo & 0xFFFFFFFF) + lo_hi;
-                highHalf = (hi_lo >> 32) + (cross >> 32) + hi_hi;
-                lowHalf = (cross << 32) | (lo_lo & 0xFFFFFFFF);
-            }
-
-            return lowHalf ^ highHalf;
-        }
-
-        ////XXH_FORCE_INLINE xxh_u64
-        ////XXH_mult32to64(xxh_u64 x, xxh_u64 y)
-        ////{
-        ////    return (x & 0xFFFFFFFF) * (y & 0xFFFFFFFF);
-        ////}
-
-        private static ulong XXH_mult32to64(ulong x, ulong y)
-        {
-            return (x & 0xFFFFFFFF) * (y & 0xFFFFFFFF);
+                + XXHashShared.XXH3_mul128_fold64(input_lo, input_hi);
+            return XXHashShared.XXH3_avalanche(acc);
         }
 
         ////XXH_FORCE_INLINE void
@@ -256,7 +157,7 @@ namespace XXHash.Managed
             ulong data_val = Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref input, lane * 8));
             ulong data_key = data_val ^ Unsafe.Add(ref secret, lane);
             Unsafe.Add(ref acc, lane ^1) += data_val;
-            Unsafe.Add(ref acc, lane) += XXH_mult32to64(data_key & 0xFFFFFFFF, data_key >> 32);
+            Unsafe.Add(ref acc, lane) += XXHashShared.XXH_mult32to64(data_key & 0xFFFFFFFF, data_key >> 32);
         }
 
         /////*!
@@ -361,7 +262,7 @@ namespace XXHash.Managed
         {
             ulong key64 = Unsafe.Add(ref secret, lane);
             ulong acc64 = Unsafe.Add(ref acc, lane);
-            acc64 = XXH_xorshift64(acc64, 47);
+            acc64 = XXHashShared.XXH_xorshift64(acc64, 47);
             acc64 ^= key64;
             acc64 *= XXHashShared.XXH_PRIME32_1;
             Unsafe.Add(ref acc, lane) = acc64;
@@ -568,7 +469,7 @@ namespace XXHash.Managed
             var input_lo = Unsafe.ReadUnaligned<ulong>(ref input);
             var input_hi = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input, 8));
 
-            return XXH3_mul128_fold64(
+            return XXHashShared.XXH3_mul128_fold64(
                 input_lo ^ (XXHashShared.GetSecret64(secretIndex) + seed64),
                 input_hi ^ (XXHashShared.GetSecret64(secretIndex + 8) - seed64));
         }
@@ -643,7 +544,7 @@ namespace XXHash.Managed
                 acc += XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, 16 * i), 16 * i, seed);
             }
 
-            acc = XXH3_avalanche(acc);
+            acc = XXHashShared.XXH3_avalanche(acc);
 
             for (uint i = 8; i < nbRounds; i++)
             {
@@ -652,7 +553,7 @@ namespace XXHash.Managed
 
             /* last bytes */
             acc += XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 16), XXHashShared.XXH3_SECRET_SIZE_MIN - XXH3_MIDSIZE_LASTOFFSET, seed);
-            return XXH3_avalanche(acc);
+            return XXHashShared.XXH3_avalanche(acc);
         }
 
 
@@ -667,7 +568,7 @@ namespace XXHash.Managed
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ulong XXH3_mix2Accs(ref ulong acc, ref ulong secret)
         {
-            return XXH3_mul128_fold64(
+            return XXHashShared.XXH3_mul128_fold64(
                 acc ^ secret,
                 Unsafe.Add(ref acc, 1) ^ Unsafe.Add(ref secret, 1));
         }
@@ -794,7 +695,7 @@ namespace XXHash.Managed
                 start += XXH3_mix2Accs(ref Unsafe.Add(ref acc, 2 * i), ref Unsafe.AddByteOffset(ref secret, 16 * i));
             }
 
-            return XXH3_avalanche(start);
+            return XXHashShared.XXH3_avalanche(start);
         }
 
         ////XXH_FORCE_INLINE void
@@ -1156,9 +1057,10 @@ namespace XXHash.Managed
         ////}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        XXH128Hash XXH3_len_0to16_128b(ref byte input, uint len, ref byte secret, ulong seed)
+        static XXH128Hash XXH3_len_0to16_128b(ref byte input, uint len, ref byte secret, ulong seed)
         {
-
+            if (len > 8)
+                return XXH3_len_9to16_128b(ref input, len, ref secret, seed);
         }
 
         ////XXH_FORCE_INLINE XXH_PUREF XXH128_hash_t
@@ -1189,7 +1091,7 @@ namespace XXHash.Managed
         ////        return h128;
         ////    }
         ////}
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static XXH128Hash XXH3_len_1to3_128b(ref byte input, uint len, ref byte secret, ulong seed)
         {
@@ -1209,6 +1111,134 @@ namespace XXHash.Managed
                 High = XXHashShared.XXH64_avalanche(keyed_hi),
                 Low = XXHashShared.XXH64_avalanche(keyed_lo)
             };
+        }
+
+        ////XXH_FORCE_INLINE XXH_PUREF XXH128_hash_t
+        ////XXH3_len_4to8_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
+        ////{
+        ////    XXH_ASSERT(input != NULL);
+        ////        XXH_ASSERT(secret != NULL);
+        ////        XXH_ASSERT(4 <= len && len <= 8);
+        ////        seed ^= (xxh_u64) XXH_swap32((xxh_u32) seed) << 32;
+        ////    {   xxh_u32 const input_lo = XXH_readLE32(input);
+        ////        xxh_u32 const input_hi = XXH_readLE32(input + len - 4);
+        ////        xxh_u64 const input_64 = input_lo + ((xxh_u64)input_hi << 32);
+        ////        xxh_u64 const bitflip = (XXH_readLE64(secret + 16) ^ XXH_readLE64(secret + 24)) + seed;
+        ////        xxh_u64 const keyed = input_64 ^ bitflip;
+
+        ////        /* Shift len to the left to ensure it is even, this avoids even multiplies. */
+        ////        XXH128_hash_t m128 = XXH_mult64to128(keyed, XXH_PRIME64_1 + (len << 2));
+
+        ////        m128.high64 += (m128.low64 << 1);
+        ////        m128.low64  ^= (m128.high64 >> 3);
+
+        ////        m128.low64   = XXH_xorshift64(m128.low64, 35);
+        ////        m128.low64  *= 0x9FB21C651E98DF25ULL;
+        ////        m128.low64   = XXH_xorshift64(m128.low64, 28);
+        ////        m128.high64  = XXH3_avalanche(m128.high64);
+        ////        return m128;
+        ////    }
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static XXH128Hash XXH3_len_4to8_128b(ref byte input, uint len, ref byte secret, ulong seed)
+        {
+            uint input_lo = Unsafe.ReadUnaligned<uint>(ref input);
+            uint input_hi = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref input, len - 4));
+            ulong input_64 = input_lo + ((ulong)input_hi << 32);
+            ulong bitflip = (XXHashShared.GetSecret64(16) ^ XXHashShared.GetSecret64(24)) + seed;
+            ulong keyed = input_64 ^ bitflip;
+
+            XXH128Hash m128 = XXHashShared.XXH3_mul128(keyed, XXHashShared.XXH_PRIME64_1 + (len << 2));
+            m128.High += (m128.Low << 1);
+            m128.Low ^= (m128.High >> 3);
+            m128.Low = XXHashShared.XXH_xorshift64(m128.Low, 35);
+            m128.Low *= 0x9FB21C651E98DF25UL;
+            m128.Low = XXHashShared.XXH_xorshift64(m128.Low, 28);
+            m128.High = XXHashShared.XXH3_avalanche(m128.High);
+
+            return m128;
+        }
+
+        ////XXH_FORCE_INLINE XXH_PUREF XXH128_hash_t
+        ////XXH3_len_9to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
+        ////{
+        ////    XXH_ASSERT(input != NULL);
+        ////    XXH_ASSERT(secret != NULL);
+        ////    XXH_ASSERT(9 <= len && len <= 16);
+        ////    {   xxh_u64 const bitflipl = (XXH_readLE64(secret+32) ^ XXH_readLE64(secret+40)) - seed;
+        ////        xxh_u64 const bitfliph = (XXH_readLE64(secret+48) ^ XXH_readLE64(secret+56)) + seed;
+        ////        xxh_u64 const input_lo = XXH_readLE64(input);
+        ////        xxh_u64       input_hi = XXH_readLE64(input + len - 8);
+        ////        XXH128_hash_t m128 = XXH_mult64to128(input_lo ^ input_hi ^ bitflipl, XXH_PRIME64_1);
+        ////        /*
+        ////         * Put len in the middle of m128 to ensure that the length gets mixed to
+        ////         * both the low and high bits in the 128x64 multiply below.
+        ////         */
+        ////        m128.low64 += (xxh_u64)(len - 1) << 54;
+        ////        input_hi   ^= bitfliph;
+        ////        /*
+        ////         * Add the high 32 bits of input_hi to the high 32 bits of m128, then
+        ////         * add the long product of the low 32 bits of input_hi and XXH_PRIME32_2 to
+        ////         * the high 64 bits of m128.
+        ////         *
+        ////         * The best approach to this operation is different on 32-bit and 64-bit.
+        ////         */
+        ////        if (sizeof(void *) < sizeof(xxh_u64)) { /* 32-bit */
+        ////            /*
+        ////             * 32-bit optimized version, which is more readable.
+        ////             *
+        ////             * On 32-bit, it removes an ADC and delays a dependency between the two
+        ////             * halves of m128.high64, but it generates an extra mask on 64-bit.
+        ////             */
+        ////            m128.high64 += (input_hi & 0xFFFFFFFF00000000ULL) + XXH_mult32to64((xxh_u32)input_hi, XXH_PRIME32_2);
+        ////        } else {
+        ////            /*
+        ////             * 64-bit optimized (albeit more confusing) version.
+        ////             *
+        ////             * Uses some properties of addition and multiplication to remove the mask:
+        ////             *
+        ////             * Let:
+        ////             *    a = input_hi.lo = (input_hi & 0x00000000FFFFFFFF)
+        ////             *    b = input_hi.hi = (input_hi & 0xFFFFFFFF00000000)
+        ////             *    c = XXH_PRIME32_2
+        ////             *
+        ////             *    a + (b * c)
+        ////             * Inverse Property: x + y - x == y
+        ////             *    a + (b * (1 + c - 1))
+        ////             * Distributive Property: x * (y + z) == (x * y) + (x * z)
+        ////             *    a + (b * 1) + (b * (c - 1))
+        ////             * Identity Property: x * 1 == x
+        ////             *    a + b + (b * (c - 1))
+        ////             *
+        ////             * Substitute a, b, and c:
+        ////             *    input_hi.hi + input_hi.lo + ((xxh_u64)input_hi.lo * (XXH_PRIME32_2 - 1))
+        ////             *
+        ////             * Since input_hi.hi + input_hi.lo == input_hi, we get this:
+        ////             *    input_hi + ((xxh_u64)input_hi.lo * (XXH_PRIME32_2 - 1))
+        ////             */
+        ////            m128.high64 += input_hi + XXH_mult32to64((xxh_u32)input_hi, XXH_PRIME32_2 - 1);
+        ////        }
+        ////        /* m128 ^= XXH_swap64(m128 >> 64); */
+        ////        m128.low64  ^= XXH_swap64(m128.high64);
+
+        ////        {   /* 128x64 multiply: h128 = m128 * XXH_PRIME64_2; */
+        ////            XXH128_hash_t h128 = XXH_mult64to128(m128.low64, XXH_PRIME64_2);
+        ////            h128.high64 += m128.high64 * XXH_PRIME64_2;
+
+        ////            h128.low64   = XXH3_avalanche(h128.low64);
+        ////            h128.high64  = XXH3_avalanche(h128.high64);
+        ////            return h128;
+        ////    }   }
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static XXH128Hash XXH3_len_9to16_128b(ref byte input, uint len, ref byte secret, ulong seed)
+        {
+            ulong bitflipl = (XXHashShared.GetSecret64(32) ^ XXHashShared.GetSecret64(40)) - seed;
+            ulong bitfliph = (XXHashShared.GetSecret64(48) ^ XXHashShared.GetSecret64(56)) + seed;
+            ulong input_lo = Unsafe.ReadUnaligned<ulong>(ref input);
+            ulong input_hi = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input, len - 8));
         }
     }
 }
