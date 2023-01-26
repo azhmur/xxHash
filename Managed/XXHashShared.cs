@@ -7,6 +7,7 @@ using static System.Runtime.Intrinsics.Arm.ArmBase;
 
 namespace XXHash.Managed
 {
+    [SkipLocalsInit]
     public static unsafe class XXHashShared
     {
         public const uint XXH_STRIPE_LEN = 64;
@@ -14,6 +15,9 @@ namespace XXHash.Managed
         public const uint XXH_ACC_NB = XXH_STRIPE_LEN / sizeof(ulong);
         public const uint XXH3_SECRET_SIZE_MIN = 136;
         public const uint XXH_SECRET_DEFAULT_SIZE = 192;
+        public const uint XXH3_MIDSIZE_STARTOFFSET = 3;
+        public const uint XXH3_MIDSIZE_LASTOFFSET = 17;
+        public const uint XXH_SECRET_MERGEACCS_START = 11;
 
         public static ReadOnlySpan<byte> XXH3_kSecret => new byte[] {
             0xb8, 0xfe, 0x6c, 0x39, 0x23, 0xa4, 0x4b, 0xbe, 0x7c, 0x01, 0x81, 0x2c, 0xf7, 0x21, 0xad, 0x1c,
@@ -73,9 +77,9 @@ namespace XXHash.Managed
         internal static ulong XXH64_avalanche(ulong h64)
         {
             h64 ^= h64 >> 33;
-            h64 *= XXHashShared.XXH_PRIME64_2;
+            h64 *= XXH_PRIME64_2;
             h64 ^= h64 >> 29;
-            h64 *= XXHashShared.XXH_PRIME64_3;
+            h64 *= XXH_PRIME64_3;
             h64 ^= h64 >> 32;
             return h64;
         }
@@ -189,6 +193,70 @@ namespace XXHash.Managed
         public static ulong XXH_xorshift64(ulong v64, int shift)
         {
             return v64 ^ (v64 >> shift);
+        }
+
+        ////XXH_FORCE_INLINE xxh_u64 XXH3_mix16B(const xxh_u8* XXH_RESTRICT input,
+        ////                             const xxh_u8* XXH_RESTRICT secret, xxh_u64 seed64)
+        ////{
+        ////#if defined(__GNUC__) && !defined(__clang__) /* GCC, not Clang */ \
+        ////    && defined(__i386__) && defined(__SSE2__)  /* x86 + SSE2 */ \
+        ////    && !defined(XXH_ENABLE_AUTOVECTORIZE)      /* Define to disable like XXH32 hack */
+        ////    /*
+        ////        * UGLY HACK:
+        ////        * GCC for x86 tends to autovectorize the 128-bit multiply, resulting in
+        ////        * slower code.
+        ////        *
+        ////        * By forcing seed64 into a register, we disrupt the cost model and
+        ////        * cause it to scalarize. See `XXH32_round()`
+        ////        *
+        ////        * FIXME: Clang's output is still _much_ faster -- On an AMD Ryzen 3600,
+        ////        * XXH3_64bits @ len=240 runs at 4.6 GB/s with Clang 9, but 3.3 GB/s on
+        ////        * GCC 9.2, despite both emitting scalar code.
+        ////        *
+        ////        * GCC generates much better scalar code than Clang for the rest of XXH3,
+        ////        * which is why finding a more optimal codepath is an interest.
+        ////        */
+        ////    XXH_COMPILER_GUARD(seed64);
+        ////#endif
+        ////    {   xxh_u64 const input_lo = XXH_readLE64(input);
+        ////        xxh_u64 const input_hi = XXH_readLE64(input + 8);
+        ////        return XXH3_mul128_fold64(
+        ////            input_lo ^ (XXH_readLE64(secret)   + seed64),
+        ////            input_hi ^ (XXH_readLE64(secret+8) - seed64)
+        ////        );
+        ////    }
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong XXH3_mix16B(ref byte input, uint secretIndex, ulong seed64)
+        {
+            var input_lo = Unsafe.ReadUnaligned<ulong>(ref input);
+            var input_hi = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input, 8));
+
+            return XXH3_mul128_fold64(
+                input_lo ^ (GetSecret64(secretIndex) + seed64),
+                input_hi ^ (GetSecret64(secretIndex + 8) - seed64));
+        }
+
+        ////XXH_FORCE_INLINE XXH128_hash_t
+        ////XXH128_mix32B(XXH128_hash_t acc, const xxh_u8* input_1, const xxh_u8* input_2,
+        ////              const xxh_u8* secret, XXH64_hash_t seed)
+        ////{
+        ////    acc.low64  += XXH3_mix16B (input_1, secret+0, seed);
+        ////    acc.low64  ^= XXH_readLE64(input_2) + XXH_readLE64(input_2 + 8);
+        ////    acc.high64 += XXH3_mix16B (input_2, secret+16, seed);
+        ////    acc.high64 ^= XXH_readLE64(input_1) + XXH_readLE64(input_1 + 8);
+        ////    return acc;
+        ////}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static XXH128Hash XXH128_mix32B(XXH128Hash acc, ref byte input_1, ref byte input_2, uint secretOffset, ulong seed)
+        {
+            acc.Low += XXH3_mix16B(ref input_1, secretOffset, seed);
+            acc.Low ^= Unsafe.ReadUnaligned<ulong>(ref input_2) + Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input_2, 8));
+            acc.High += XXH3_mix16B(ref input_2, secretOffset + 16, seed);
+            acc.High ^= Unsafe.ReadUnaligned<ulong>(ref input_1) + Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input_1, 8));
+            return acc;
         }
     }
 }

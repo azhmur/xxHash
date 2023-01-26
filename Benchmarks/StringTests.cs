@@ -17,7 +17,7 @@ namespace XXHash.Benchmarks
     {
         private static readonly ulong seed = unchecked((ulong)Random.Shared.NextInt64());
 
-        [Params(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,51200)]
+        [Params(/*1,2,3,4,5,6,7,8,9,10,*/11/*,12,13,14,15,16,51200*/)]
         public int length;
 
         public string str;
@@ -37,20 +37,20 @@ namespace XXHash.Benchmarks
             var hash = str.GetHashCode();
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void K4osXXhash64()
         {
             var hash = K4os.Hash.xxHash.XXH64.DigestOf(MemoryMarshal.AsBytes(str.AsSpan()));
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void StandartXXHash64()
         {
             var bytes = MemoryMarshal.AsBytes(str.AsSpan());
             var hash = Standart.Hash.xxHash.xxHash64.ComputeHash(bytes, bytes.Length);
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void StandartXXHash3()
         {
             var bytes = MemoryMarshal.AsBytes(str.AsSpan());
@@ -76,11 +76,8 @@ namespace XXHash.Benchmarks
             var hash = XXHashNative.XXHash3_64(str, seed); 
         }
 
-        //[Benchmark]
-        public void xxh3_128_Native()
-        {
-            var hash = XXHashNative.XXHash3_128(str, seed).low64;
-        }
+        [Benchmark]
+        public XXH128_hash_t xxh3_128_Native() => XXHashNative.XXHash3_128(str, seed);
 
         //[Benchmark]
         public void Xxh3Net()
@@ -88,13 +85,16 @@ namespace XXHash.Benchmarks
             var hash = XXHash3NET.XXHash3.Hash64(MemoryMarshal.Cast<char, byte>(str.AsSpan()), seed); 
         }
 
-        [Benchmark(Baseline = true)]
+        [Benchmark()]
+        public XXH128Hash Xxh3_128_NewManaged() => XXHash3.XXH3_128(str, seed);
+
+        //[Benchmark(Baseline = true)]
         public void Xxh3_NewManaged()
         {
             var hash = XXHash3.XXH3_64(str, seed);
         }
 
-        [Benchmark()]
+        //[Benchmark()]
         public void Xxh64_NewManaged()
         {
             var hash = XXHash64.XXH64(str, seed);
