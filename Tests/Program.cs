@@ -40,8 +40,11 @@ namespace XXHash.Tests
                 
                 var golden64 = XXHash.Native.XXHashNative.XXHash64(data, seed);
                 var golden3_64 = XXHash.Native.XXHashNative.XXHash3_64(data, seed);
+                var golden3_128 = XXHash.Native.XXHashNative.XXHash3_128(data, seed);
+
                 var managed64 = XXHash.Managed.XXHash64.XXH64(data, seed);
                 var managed3_64 = XXHash.Managed.XXHash3.XXH3_64(data, seed);
+                var managed3_128 = XXHash.Managed.XXHash3.XXH3_128(data, seed);
 
                 if (golden3_64 != managed3_64)
                 {
@@ -52,6 +55,13 @@ namespace XXHash.Tests
                 if (golden64 != managed64)
                 {
                     Console.WriteLine($"xx64 verification failed at length {i}");
+                    return;
+                }
+
+
+                if (golden3_128.low64 != managed3_128.Low || golden3_128.high64 != managed3_128.High)
+                {
+                    Console.WriteLine($"xx3_128 verification failed at length {i}");
                     return;
                 }
             }

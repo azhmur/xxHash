@@ -17,7 +17,7 @@ namespace XXHash.Benchmarks
     {
         private static readonly ulong seed = unchecked((ulong)Random.Shared.NextInt64());
 
-        [Params(1/*,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,51200*/)]
+        [Params(/*1,2,3,4,5,6,7,8,9,10,*/11/*,12,13,14,15,16,51200*/)]
         public int length;
 
         public string str;
@@ -31,10 +31,10 @@ namespace XXHash.Benchmarks
             str = Encoding.ASCII.GetString(bytes);
         }
 
-        [Benchmark]
-        public int StringGetHashCode()
+        //[Benchmark]
+        public void StringGetHashCode()
         {
-            return str.GetHashCode();
+            var hash = str.GetHashCode();
         }
 
         //[Benchmark]
@@ -70,17 +70,14 @@ namespace XXHash.Benchmarks
             var hash = WyHash.WyHash64.ComputeHash64(MemoryMarshal.AsBytes(str.AsSpan()));
         }
 
-        [Benchmark]
-        public int xxh3_64_Native()
+        //[Benchmark]
+        public void xxh3_64_Native()
         {
-            return (int)XXHashNative.XXHash3_64(str, seed); 
+            var hash = XXHashNative.XXHash3_64(str, seed); 
         }
 
         [Benchmark]
-        public int xxh3_128_Native()
-        {
-            return (int)XXHashNative.XXHash3_128(str, seed).low64;
-        }
+        public XXH128_hash_t xxh3_128_Native() => XXHashNative.XXHash3_128(str, seed);
 
         //[Benchmark]
         public void Xxh3Net()
@@ -88,16 +85,19 @@ namespace XXHash.Benchmarks
             var hash = XXHash3NET.XXHash3.Hash64(MemoryMarshal.Cast<char, byte>(str.AsSpan()), seed); 
         }
 
-        [Benchmark(Baseline = true)]
-        public int Xxh3_NewManaged()
+        [Benchmark()]
+        public XXH128Hash Xxh3_128_NewManaged() => XXHash3.XXH3_128(str, seed);
+
+        //[Benchmark(Baseline = true)]
+        public void Xxh3_NewManaged()
         {
-            return (int)XXHash3.XXH3_64(str, seed);
+            var hash = XXHash3.XXH3_64(str, seed);
         }
 
-        [Benchmark()]
-        public int Xxh64_NewManaged()
+        //[Benchmark()]
+        public void Xxh64_NewManaged()
         {
-            return (int)XXHash64.XXH64(str, seed);
+            var hash = XXHash64.XXH64(str, seed);
         }
 
         //[Benchmark]
@@ -108,10 +108,10 @@ namespace XXHash.Benchmarks
             var hash = hashCode.ToHashCode();
         }
 
-        [Benchmark]
-        public int GetNonRandomizedHashCode()
+        //[Benchmark]
+        public void GetNonRandomizedHashCode()
         {
-            return (int)GetNonRandomizedHashCode(this.str);
+            var hash = GetNonRandomizedHashCode(this.str);
         }
 
         //[Benchmark]

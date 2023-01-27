@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace XXHash.Managed
 {
+    [SkipLocalsInit]
     public static class XXHash64
     {
         ////static xxh_u64 XXH64_round(xxh_u64 acc, xxh_u64 input)
