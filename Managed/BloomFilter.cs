@@ -16,7 +16,7 @@ namespace XXHash.Managed
 {
     public sealed class BloomFilter
     {
-        public static readonly Vector256<int> Multipliers = Vector256.Create(0x00000001, unchecked((int)0x9e3779b9), unchecked((int)0xe35e67b1), 0x734297e9, 0x35fbe861, unchecked((int)0xdeb7c719), 0x448b211, 0x3459b749);
+        public static readonly Vector256<uint> Multipliers = Vector256.Create(0x00000001, 0x9e3779b9, 0xe35e67b1, 0x734297e9, 0x35fbe861, 0xdeb7c719, 0x448b211, 0x3459b749);
         public static readonly Vector256<int> ZeroToSeven = Vector256.Create(0, 1, 2, 3, 4, 5, 6, 7);
 
         private readonly byte[] data;
@@ -24,8 +24,35 @@ namespace XXHash.Managed
 
         public BloomFilter(int millibitsPerKey, int sizeInBytes)
         {
+            var lines = sizeInBytes >> 6;
+
+            sizeInBytes = sizeInBytes != lines << 6
+                ? (lines + 1) << 6
+                : sizeInBytes;
+
             this.data = new byte[sizeInBytes];
             this.numerOfProbes = ChooseNumProbes(millibitsPerKey);
+        }
+
+        public string ToHexString() => BitConverter.ToString(this.data);
+
+        public ulong ToFingerprint() => XXHash3.XXH3_64(this.data, 0);
+
+        public int SizeInBytes => this.data.Length;
+
+        public void LoadData(byte[] data)
+        {
+            if (data.Length != this.data.Length)
+            {
+                throw new ArgumentException(nameof(data), "Data length doesn't match filter size");
+            }
+
+            data.CopyTo(this.data, 0);
+        }
+
+        public byte[] SaveData()
+        {
+            return this.data.ToArray();
         }
 
         public void AddHash(string str)
@@ -63,7 +90,7 @@ namespace XXHash.Managed
             return std::pow(1.0 - std::exp(-num_probes / bits_per_key), num_probes);
         }*/
 
-        static double StandardFpRate(double bits_per_key, int num_probes) 
+        public static double StandardFpRate(double bits_per_key, int num_probes) 
             => Math.Pow(1.0 - Math.Exp(-num_probes / bits_per_key), num_probes);
 
         // False positive rate of a "blocked"/"shareded"/"cache-local" Bloom filter,
@@ -90,7 +117,7 @@ namespace XXHash.Managed
             return (crowded_fp + uncrowded_fp) / 2;
         }*/
 
-        static double CacheLocalFpRate(double bits_per_key, int num_probes, int cache_line_bits)
+        public static double CacheLocalFpRate(double bits_per_key, int num_probes, int cache_line_bits)
         {
             if (bits_per_key <= 0.0)
             {
@@ -132,7 +159,7 @@ namespace XXHash.Managed
             }
         }*/
 
-        static double FingerprintFpRate(ulong num_keys, int fingerprint_bits)
+        public static double FingerprintFpRate(ulong num_keys, int fingerprint_bits)
         {
             double inv_fingerprint_space = Math.Pow(0.5, fingerprint_bits);
 
@@ -160,7 +187,7 @@ namespace XXHash.Managed
             return rate1 + rate2 - (rate1 * rate2);
         }*/
 
-        static double IndependentProbabilitySum(double rate1, double rate2) 
+        public static double IndependentProbabilitySum(double rate1, double rate2) 
             => rate1 + rate2 - (rate1 * rate2);
 
         // NOTE: this has only been validated to enough accuracy for producing
@@ -173,7 +200,7 @@ namespace XXHash.Managed
                 BloomMath::FingerprintFpRate(keys, hash_bits));
         }*/
 
-        static double EstimatedFpRate(ulong keys, ulong bytes, int num_probes, int hash_bits) => 
+        public static double EstimatedFpRate(ulong keys, ulong bytes, int num_probes, int hash_bits) => 
             IndependentProbabilitySum(
                 CacheLocalFpRate(8.0 * bytes / keys, num_probes, 512),
                 FingerprintFpRate(keys, hash_bits));
@@ -251,7 +278,7 @@ namespace XXHash.Managed
         }*/
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int ChooseNumProbes(int millibits_per_key) => 
+        public static int ChooseNumProbes(int millibits_per_key) => 
             millibits_per_key switch
         {
             <= 2080 => 1,
@@ -277,7 +304,7 @@ namespace XXHash.Managed
         }*/
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void AddHash(uint h1, uint h2, uint len_bytes, int num_probes, ref byte data)
+        private static void AddHash(uint h1, uint h2, uint len_bytes, int num_probes, ref byte data)
         {
             var bytes_to_cache_line = FastRange32(len_bytes >> 6, h1) << 6;
             AddHashPrepared(h2, num_probes, ref Unsafe.Add(ref data, bytes_to_cache_line));
@@ -295,7 +322,7 @@ namespace XXHash.Managed
         }*/
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void AddHashPrepared(uint h2, int num_probes, ref byte data_at_cache_line)
+        private static void AddHashPrepared(uint h2, int num_probes, ref byte data_at_cache_line)
         {
             uint h = h2;
             for (int i = 0; i < num_probes; ++i) 
@@ -318,21 +345,19 @@ namespace XXHash.Managed
         //}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe void PrepareHash(uint h1, uint len_bytes, ref byte data, ref byte byte_offset) 
+        static unsafe void PrepareHash(uint h1, uint len_bytes, ref byte data, out uint bytes_to_cache_line) 
         {
-            uint bytes_to_cache_line = FastRange32(len_bytes >> 6, h1) << 6;
+            bytes_to_cache_line = FastRange32(len_bytes >> 6, h1) << 6;
             if (Sse.IsSupported)
             {
                 Sse.Prefetch1(Unsafe.AsPointer(ref Unsafe.Add(ref data, bytes_to_cache_line)));
                 Sse.Prefetch1(Unsafe.AsPointer(ref Unsafe.Add(ref data, bytes_to_cache_line + 63)));
             }
-
-            Unsafe.WriteUnaligned(ref byte_offset, bytes_to_cache_line);
         }
 
         static uint FastRange32(uint hash, uint range)
         {
-            var product = (ulong)hash * range;
+            var product = (ulong)range * hash;
             return (uint)(product >> 32);
         }
 
@@ -473,7 +498,7 @@ namespace XXHash.Managed
                 {
                     int bitpos = (int)(h >> (32 - 9));
 
-                    if ((Unsafe.Add(ref data_at_cache_line, bitpos >> 3) & (1 << (bitpos & 7))) == 0)
+                    if ((Unsafe.Add(ref data_at_cache_line, bitpos >> 3) & (byte)(1 << (bitpos & 7))) == 0)
                     {
                         return false;
                     }
@@ -488,19 +513,20 @@ namespace XXHash.Managed
                 int rem_probes = num_probes;
                 while (true)
                 {
-                    var hash_vector = Vector256.Create((int)h);
+                    var hash_vector = Vector256.Create(h);
                     hash_vector = Avx2.MultiplyLow(hash_vector, Multipliers);
                     var word_addresses = Avx2.ShiftRightLogical(hash_vector, 28);
-                    var lower = Avx2.LoadVector256((int*)Unsafe.AsPointer(ref data_at_cache_line));
-                    var upper = Avx2.LoadVector256((int*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref data_at_cache_line, 32)));
+                    var lower = Avx2.LoadVector256((uint*)Unsafe.AsPointer(ref data_at_cache_line));
+                    var upper = Avx2.LoadVector256((uint*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref data_at_cache_line, 32)));
                     lower = Avx2.PermuteVar8x32(lower, word_addresses);
                     upper = Avx2.PermuteVar8x32(upper, word_addresses);
-                    var upper_lower_selector = Avx2.ShiftRightArithmetic(hash_vector, 31);
+                    var upper_lower_selector = Avx2.ShiftRightArithmetic(hash_vector.AsInt32(), 31).AsUInt32();
                     var value_vector = Avx2.BlendVariable(lower, upper, upper_lower_selector);
                     var k_selector = Avx2.Subtract(ZeroToSeven, Vector256.Create(rem_probes));
+                    k_selector = Avx2.ShiftRightLogical(k_selector, 31);
                     var bit_addresses = Avx2.ShiftLeftLogical(hash_vector, 4);
                     bit_addresses = Avx2.ShiftRightLogical(bit_addresses, 27);
-                    var bit_mask = Avx2.ShiftLeftLogicalVariable(k_selector, bit_addresses.AsUInt32());
+                    var bit_mask = Avx2.ShiftLeftLogicalVariable(k_selector, bit_addresses.AsUInt32()).AsUInt32();
                     var match = Avx.TestC(value_vector, bit_mask);
 
                     if (rem_probes <= 8)

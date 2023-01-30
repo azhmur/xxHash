@@ -17,3 +17,7 @@ Alexander Melnik port: https://github.com/uranium62/xxHash
 Milosz Krajewski port: https://github.com/MiloszKrajewski/K4os.Hash.xxHash
 
 There are some others implementations available on nuget, but they are much slower or produce incorrect results.
+
+# BloomFilter
+
+BloomFilter avx2 optimized implementation is taken from Rocksdb. It can be hard to use as you should have good knowledge of your data in advance to tune number of parameters. Expect 1-2 bytes per key as good size estimation. 

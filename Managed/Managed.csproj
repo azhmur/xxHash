@@ -6,16 +6,16 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <PackageId>XXHash.Managed</PackageId>
-    <Version>1.2.1</Version>
+    <Version>1.3.0</Version>
     <Authors>Anatoly Zhmur</Authors>
     <Product />
-    <Description>Managed implementation of xxHash3 and xxHash64 algorithms with support of intrinsics (SSE2/AVX2, ARM).</Description>
+    <Description>Managed implementation of xxHash3 and xxHash64 algorithms with support of intrinsics (SSE2/AVX2, ARM). Avx2 optimized BloomFilter implementation.</Description>
     <RepositoryUrl>https://github.com/azhmur/xxHash</RepositoryUrl>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <AssemblyName>XXHash.Managed</AssemblyName>
     <RootNamespace>XXHash.Managed</RootNamespace>
-    <PackageTags>xxHash, xxHash3, xxHash3_64, xxHash64, xxHash3_128</PackageTags>
+    <PackageTags>xxHash, xxHash3, xxHash3_64, xxHash64, xxHash3_128, BloomFilter</PackageTags>
     <EmbedAllSources>true</EmbedAllSources>
     <DebugType>Embedded</DebugType>
   </PropertyGroup>

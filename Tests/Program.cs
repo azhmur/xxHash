@@ -7,7 +7,7 @@ namespace XXHash.Tests
     {
         static void Main(string[] args)
         {
-            BloomFilter();
+            BloomFilterTest();
         }
 
         static void RandomTest()
@@ -69,15 +69,42 @@ namespace XXHash.Tests
             Console.WriteLine("Validation succeded");
         }
 
-        static void BloomFilter()
+        static void BloomFilterTest()
         {
-            var bloomFilter = new BloomFilter(5000, 20);
-            bloomFilter.AddHash("xxx");
-            bloomFilter.AddHash("yyy");
+            const int millibitsPerKey = 14000;
+            const int sizeInBytes = 64 * 200;
+            const int elementCount = 10000;
 
-            Console.WriteLine(bloomFilter.HashMayMatch("xxx"));
-            Console.WriteLine(bloomFilter.HashMayMatch("xxx1"));
-            Console.WriteLine(bloomFilter.HashMayMatch("yyy"));
+            var bloomFilter = new BloomFilter(millibitsPerKey, sizeInBytes);
+
+            for(int i = 0; i < elementCount; ++i)
+            {
+                bloomFilter.AddHash($"hash{i}");
+            }
+
+
+            Console.WriteLine(bloomFilter.ToHexString());
+            Console.WriteLine("Estimated FP rate: " + BloomFilter.EstimatedFpRate(elementCount, (ulong)bloomFilter.SizeInBytes, BloomFilter.ChooseNumProbes(millibitsPerKey), 32));
+
+            for (int i = 0; i < elementCount; ++i)
+            {
+                if (!bloomFilter.HashMayMatch($"hash{i}"))
+                {
+                    Console.WriteLine("False negative for hash{i}");
+                    return;
+                }
+            }
+
+            var fpCount = 0;
+            for (int i = 0; i < elementCount; ++i)
+            {
+                if (bloomFilter.HashMayMatch($"non{i}"))
+                {
+                    ++fpCount;
+                }
+            }
+
+            Console.WriteLine("Measured FP rate:" + (double)fpCount / elementCount);
         }
     }
 }
