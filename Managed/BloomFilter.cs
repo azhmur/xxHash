@@ -14,6 +14,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace XXHash.Managed
 {
+    // https://github.com/facebook/rocksdb/blob/main/util/bloom_impl.h
     public sealed class BloomFilter
     {
         public static readonly Vector256<uint> Multipliers = Vector256.Create(0x00000001, 0x9e3779b9, 0xe35e67b1, 0x734297e9, 0x35fbe861, 0xdeb7c719, 0x448b211, 0x3459b749);
@@ -21,8 +22,9 @@ namespace XXHash.Managed
 
         private readonly byte[] data;
         private readonly int numerOfProbes;
+        private readonly ulong seed;
 
-        public BloomFilter(int millibitsPerKey, int sizeInBytes)
+        public BloomFilter(int millibitsPerKey, int sizeInBytes, ulong seed = 0)
         {
             var lines = sizeInBytes >> 6;
 
@@ -32,13 +34,16 @@ namespace XXHash.Managed
 
             this.data = new byte[sizeInBytes];
             this.numerOfProbes = ChooseNumProbes(millibitsPerKey);
+            this.seed = seed;
         }
 
         public string ToHexString() => BitConverter.ToString(this.data);
 
-        public ulong ToFingerprint() => XXHash3.XXH3_64(this.data, 0);
+        public ulong ToFingerprint() => XXHash3.XXH3_64(this.data, this.seed);
 
         public int SizeInBytes => this.data.Length;
+
+        public ulong Seed => this.seed;
 
         public void LoadData(byte[] data)
         {
@@ -62,6 +67,21 @@ namespace XXHash.Managed
             AddHash(hash1, hash2);
         }
 
+        public void AddHash(ReadOnlySpan<char> str)
+        {
+            var (hash1, hash2) = GetHash(str);
+
+            AddHash(hash1, hash2);
+        }
+
+        public void AddHash(ReadOnlySpan<byte> data)
+        {
+            var (hash1, hash2) = GetHash(data);
+
+            AddHash(hash1, hash2);
+        }
+
+        // ignores seed value, but can store any data
         public void AddHash(uint h1, uint h2)
         {
             AddHash(h1, h2, (uint)this.data.Length, this.numerOfProbes, ref MemoryMarshal.GetArrayDataReference(this.data));
@@ -70,6 +90,20 @@ namespace XXHash.Managed
         public bool HashMayMatch(string str)
         {
             var (hash1, hash2) = GetHash(str);
+
+            return HashMayMatch(hash1, hash2);
+        }
+
+        public bool HashMayMatch(ReadOnlySpan<char> str)
+        {
+            var (hash1, hash2) = GetHash(str);
+
+            return HashMayMatch(hash1, hash2);
+        }
+
+        public bool HashMayMatch(ReadOnlySpan<byte> data)
+        {
+            var (hash1, hash2) = GetHash(data);
 
             return HashMayMatch(hash1, hash2);
         }
@@ -296,6 +330,15 @@ namespace XXHash.Managed
             > 50000 => 24,
             _ => (millibits_per_key - 1) / 2000 - 1
         };
+
+        // ignore implementation details, gives better rate than the real one
+        public static (int sizeInBytes, int millibitsPerKey) GenericSizeEstimation(int numberOfItems, double fpRate)
+        {
+            var sizeInBits = (long)Math.Ceiling(numberOfItems * Math.Log(fpRate) / Math.Log(1 / Math.Pow(2, Math.Log(2))));
+            var millibitsPerKey = (int)Math.Round((double)sizeInBits / numberOfItems * Math.Log(2)) * 1000;
+
+            return ((int)(sizeInBits / 8), millibitsPerKey);
+        }
 
         /*static inline void AddHash(uint32_t h1, uint32_t h2, uint32_t len_bytes,
             int num_probes, char *data) {
@@ -544,9 +587,30 @@ namespace XXHash.Managed
             }
         }
 
-        static (uint hash1, uint hash2) GetHash(string str)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private (uint hash1, uint hash2) GetHash(string str)
         {
-            var hash64 = XXHash3.XXH3_64(str, 0);
+            var hash64 = XXHash3.XXH3_64(str, this.seed);
+            var hash1 = (uint)hash64;
+            var hash2 = (uint)(hash64 >> 32);
+
+            return (hash1, hash2);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private (uint hash1, uint hash2) GetHash(ReadOnlySpan<char> str)
+        {
+            var hash64 = XXHash3.XXH3_64(str, this.seed);
+            var hash1 = (uint)hash64;
+            var hash2 = (uint)(hash64 >> 32);
+
+            return (hash1, hash2);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private (uint hash1, uint hash2) GetHash(ReadOnlySpan<byte> data)
+        {
+            var hash64 = XXHash3.XXH3_64(data, this.seed);
             var hash1 = (uint)hash64;
             var hash2 = (uint)(hash64 >> 32);
 

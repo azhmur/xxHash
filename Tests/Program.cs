@@ -71,10 +71,12 @@ namespace XXHash.Tests
 
         static void BloomFilterTest()
         {
-            const int millibitsPerKey = 14000;
-            const int sizeInBytes = 64 * 200;
+            //const int millibitsPerKey = 7000;
+            //const int sizeInBytes = 11700;
             const int elementCount = 10000;
+            const double fpRate = 0.001;
 
+            var (sizeInBytes, millibitsPerKey) = BloomFilter.GenericSizeEstimation(elementCount, fpRate);
             var bloomFilter = new BloomFilter(millibitsPerKey, sizeInBytes);
 
             for(int i = 0; i < elementCount; ++i)
@@ -83,7 +85,7 @@ namespace XXHash.Tests
             }
 
 
-            Console.WriteLine(bloomFilter.ToHexString());
+            Console.WriteLine(bloomFilter.SizeInBytes);
             Console.WriteLine("Estimated FP rate: " + BloomFilter.EstimatedFpRate(elementCount, (ulong)bloomFilter.SizeInBytes, BloomFilter.ChooseNumProbes(millibitsPerKey), 32));
 
             for (int i = 0; i < elementCount; ++i)

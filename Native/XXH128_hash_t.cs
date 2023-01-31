@@ -7,5 +7,10 @@ namespace XXHash.Native
     {
         public ulong low64;
         public ulong high64;
+
+        public UInt128 ToUInt128()
+        {
+            return new UInt128(high64, low64);
+        }
     }
 }

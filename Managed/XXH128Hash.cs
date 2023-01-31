@@ -46,6 +46,11 @@ public struct XXH128Hash : IEquatable<XXH128Hash>
         return $"{High:X16}{Low:X16}";
     }
 
+    public UInt128 ToUInt128()
+    {
+        return new UInt128(High, Low);
+    }
+
     public void Deconstruct(out ulong low, out ulong high)
     {
         low = Low;
