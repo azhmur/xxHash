@@ -27,7 +27,7 @@ public struct XXH128Hash : IEquatable<XXH128Hash>
 
     public static bool operator !=(XXH128Hash left, XXH128Hash right)
     {
-        return !(left == right);
+        return !left.Equals(right);
     }
 
     // SLOW AND UNSTABLE!

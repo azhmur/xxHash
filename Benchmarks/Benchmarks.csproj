@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.4" />
+    <PackageReference Include="BloomFilter.NetCore" Version="1.2.0" />
     <PackageReference Include="K4os.Hash.xxHash" Version="1.0.8" />
     <PackageReference Include="Standart.Hash.xxHash" Version="4.0.5" />
     <PackageReference Include="System.IO.Hashing" Version="7.0.0" />

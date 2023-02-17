@@ -1,4 +1,5 @@
 ﻿using System.Data.HashFunction.xxHash;
+using BloomFilter;
 using XXHash.Managed;
 
 namespace XXHash.Tests
@@ -69,24 +70,59 @@ namespace XXHash.Tests
             Console.WriteLine("Validation succeded");
         }
 
-        static void BloomFilterTest()
+        static void BloomFilterTest2()
         {
             //const int millibitsPerKey = 7000;
             //const int sizeInBytes = 11700;
             const int elementCount = 10000;
             const double fpRate = 0.001;
 
-            var (sizeInBytes, millibitsPerKey) = BloomFilter.GenericSizeEstimation(elementCount, fpRate);
-            var bloomFilter = new BloomFilter(millibitsPerKey, sizeInBytes);
+            IBloomFilter bloomFilter = FilterBuilder.Build(elementCount, fpRate);
 
-            for(int i = 0; i < elementCount; ++i)
+            for (int i = 0; i < elementCount; ++i)
+            {
+                bloomFilter.Add($"hash{i}");
+            }
+
+            for (int i = 0; i < elementCount; ++i)
+            {
+                if (!bloomFilter.Contains($"hash{i}"))
+                {
+                    Console.WriteLine("False negative for hash{i}");
+                    return;
+                }
+            }
+
+            var fpCount = 0;
+            for (int i = 0; i < elementCount; ++i)
+            {
+                if (bloomFilter.Contains($"non{i}"))
+                {
+                    ++fpCount;
+                }
+            }
+
+            Console.WriteLine("Measured FP rate:" + (double)fpCount / elementCount);
+        }
+
+        static void BloomFilterTest()
+        {
+            const int millibitsPerKey = 32000;
+            const int sizeInBytes = 1 << 16;
+            const int elementCount = 10000;
+            //const double fpRate = 0.001;
+
+            //var (sizeInBytes, millibitsPerKey) = XXHash.Managed.BloomFilter.GenericSizeEstimation(elementCount, fpRate);
+            var bloomFilter = new XXHash.Managed.BloomFilter(millibitsPerKey, sizeInBytes);
+
+            for (int i = 0; i < elementCount; ++i)
             {
                 bloomFilter.AddHash($"hash{i}");
             }
 
 
             Console.WriteLine(bloomFilter.SizeInBytes);
-            Console.WriteLine("Estimated FP rate: " + BloomFilter.EstimatedFpRate(elementCount, (ulong)bloomFilter.SizeInBytes, BloomFilter.ChooseNumProbes(millibitsPerKey), 32));
+            Console.WriteLine("Estimated FP rate: " + XXHash.Managed.BloomFilter.EstimatedFpRate(elementCount, (ulong)bloomFilter.SizeInBytes, XXHash.Managed.BloomFilter.ChooseNumProbes(millibitsPerKey), 32));
 
             for (int i = 0; i < elementCount; ++i)
             {

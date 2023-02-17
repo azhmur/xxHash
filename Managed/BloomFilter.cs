@@ -1,16 +1,8 @@
-﻿using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace XXHash.Managed
 {
@@ -21,7 +13,7 @@ namespace XXHash.Managed
         public static readonly Vector256<int> ZeroToSeven = Vector256.Create(0, 1, 2, 3, 4, 5, 6, 7);
 
         private readonly byte[] data;
-        private readonly int numerOfProbes;
+        private readonly int numberOfProbes;
         private readonly ulong seed;
 
         public BloomFilter(int millibitsPerKey, int sizeInBytes, ulong seed = 0)
@@ -33,17 +25,175 @@ namespace XXHash.Managed
                 : sizeInBytes;
 
             this.data = new byte[sizeInBytes];
-            this.numerOfProbes = ChooseNumProbes(millibitsPerKey);
+            this.numberOfProbes = ChooseNumProbes(millibitsPerKey);
             this.seed = seed;
         }
 
-        public string ToHexString() => BitConverter.ToString(this.data);
+        public BloomFilter(byte[] block, int numberOfProbes, ulong seed = 0)
+        {
+            if (block.Length == 0)
+            {
+                throw new ArgumentException("Block size should be larger than 0", nameof(block));
+            }
 
-        public ulong ToFingerprint() => XXHash3.XXH3_64(this.data, this.seed);
+            if (block.Length % (1 << 6) != 0)
+            {
+                throw new ArgumentException("Block size should be aligned to 512 bits line", nameof(block));
+            }
+
+            if (numberOfProbes <= 0)
+            {
+                throw new ArgumentException("Number of probes should be positive", nameof(numberOfProbes));
+            }
+
+            this.data = block;
+            this.numberOfProbes = numberOfProbes;
+            this.seed = seed;
+        }
+
+        public BloomFilter(BloomFilter other)
+        {
+            this.data = other.Data.ToArray();
+            this.numberOfProbes = other.NumberOfProbes;
+            this.seed = other.Seed;
+        }
 
         public int SizeInBytes => this.data.Length;
 
+        public int SizeInBits => this.data.Length * 8;
+
         public ulong Seed => this.seed;
+
+        public byte[] Data => this.data;
+
+        public int NumberOfProbes => this.numberOfProbes;
+
+        public string ToHexString() => BitConverter.ToString(this.data);
+
+        public ulong ToFingerprint64() => XXHash3.XXH3_64(this.data, this.seed);
+
+        public XXH128Hash ToFingerprint128() => XXHash3.XXH3_128(this.data, this.seed);
+
+        public void Clear()
+        {
+            this.data.AsSpan().Fill(0);
+        }
+
+        public int PopCount()
+        {
+            var dataAsUlong = MemoryMarshal.Cast<byte, ulong>(this.data);
+
+            var counter = 0;
+
+            foreach (var item in dataAsUlong)
+            {
+                counter += BitOperations.PopCount(item);
+            }
+
+            return counter;
+        }
+
+        public void Intersect(BloomFilter other)
+        {
+            if (this.SizeInBytes != other.SizeInBytes)
+            {
+                throw new ArgumentException("Size of filters should match", nameof(other));
+            }
+
+            if (this.Seed != other.Seed)
+            {
+                throw new ArgumentException("Seed of filters should match", nameof(other));
+            }
+
+            if (this.numberOfProbes != other.numberOfProbes)
+            {
+                throw new ArgumentException("Number of probes of filters should match", nameof(other));
+            }
+
+            ////for (int i = 0; i < this.data.Length; ++i)
+            ////{
+            ////    this.data[i] &= other.data[i];
+            ////}
+            
+            if (Vector256.IsHardwareAccelerated)
+            {
+                ref byte targetValue = ref MemoryMarshal.GetArrayDataReference(this.data);
+                ref byte sourceValue = ref MemoryMarshal.GetArrayDataReference(other.data);
+                
+                for (nuint i = 0; (i + 32) <= (nuint)data.Length; i += 32)
+                {
+                    Vector256<byte> sourceVector = Vector256.LoadUnsafe(ref sourceValue, i);
+                    Vector256<byte> targetVector = Vector256.LoadUnsafe(ref targetValue, i);
+
+                    targetVector &= sourceVector;
+                    Vector256.StoreUnsafe(targetVector, ref targetValue, i);
+                }
+            }
+            else
+            {
+                ref var targetUlong = ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetArrayDataReference(this.data));
+                ref var sourceUlong = ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetArrayDataReference(other.data));
+
+                for (var i = 0; i <= data.Length >> 3; ++i)
+                {
+                    targetUlong &= sourceUlong;
+
+                    targetUlong = ref Unsafe.Add(ref targetUlong, 1);
+                    sourceUlong = ref Unsafe.Add(ref sourceUlong, 1);
+                }
+            }
+        }
+
+        public void Union(BloomFilter other)
+        {
+            if (this.SizeInBytes != other.SizeInBytes)
+            {
+                throw new ArgumentException("Size of filters should match", nameof(other));
+            }
+
+            if (this.Seed != other.Seed)
+            {
+                throw new ArgumentException("Seed of filters should match", nameof(other));
+            }
+
+            if (this.numberOfProbes != other.numberOfProbes)
+            {
+                throw new ArgumentException("Number of probes of filters should match", nameof(other));
+            }
+
+            ////for (int i = 0; i < this.data.Length; ++i)
+            ////{
+            ////    this.data[i] |= other.data[i];
+            ////}
+
+            if (Vector256.IsHardwareAccelerated)
+            {
+                ref byte targetValue = ref MemoryMarshal.GetArrayDataReference(this.data);
+                ref byte sourceValue = ref MemoryMarshal.GetArrayDataReference(other.data);
+
+                for (nuint i = 0; (i + 32) <= (nuint)data.Length; i += 32)
+                {
+                    Vector256<byte> sourceVector = Vector256.LoadUnsafe(ref sourceValue, i);
+                    Vector256<byte> targetVector = Vector256.LoadUnsafe(ref targetValue, i);
+
+                    targetVector |= sourceVector;
+                    Vector256.StoreUnsafe(targetVector, ref targetValue, i);
+                }
+            }
+            else
+            {
+                ref var targetUlong = ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetArrayDataReference(this.data));
+                ref var sourceUlong = ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetArrayDataReference(other.data));
+
+                for (var i = 0; i <= data.Length >> 3; ++i)
+                {
+                    targetUlong |= sourceUlong;
+
+                    targetUlong = ref Unsafe.Add(ref targetUlong, 1);
+                    sourceUlong = ref Unsafe.Add(ref sourceUlong, 1);
+                }
+            }
+        }
 
         public void LoadData(byte[] data)
         {
@@ -53,6 +203,16 @@ namespace XXHash.Managed
             }
 
             data.CopyTo(this.data, 0);
+        }
+
+        public void LoadData(ReadOnlySpan<byte> data)
+        {
+            if (data.Length != this.data.Length)
+            {
+                throw new ArgumentException(nameof(data), "Data length doesn't match filter size");
+            }
+
+            data.CopyTo(this.data.AsSpan());
         }
 
         public byte[] SaveData()
@@ -84,7 +244,7 @@ namespace XXHash.Managed
         // ignores seed value, but can store any data
         public void AddHash(uint h1, uint h2)
         {
-            AddHash(h1, h2, (uint)this.data.Length, this.numerOfProbes, ref MemoryMarshal.GetArrayDataReference(this.data));
+            AddHash(h1, h2, (uint)this.data.Length, this.numberOfProbes, ref MemoryMarshal.GetArrayDataReference(this.data));
         }
 
         public bool HashMayMatch(string str)
@@ -110,7 +270,7 @@ namespace XXHash.Managed
 
         public bool HashMayMatch(uint h1, uint h2)
         {
-            return HashMayMatch(h1, h2, (uint)this.data.Length, this.numerOfProbes, ref MemoryMarshal.GetArrayDataReference(this.data));
+            return HashMayMatch(h1, h2, (uint)this.data.Length, this.numberOfProbes, ref MemoryMarshal.GetArrayDataReference(this.data));
         }
 
         // False positive rate of a standard Bloom filter, for given ratio of
@@ -312,8 +472,8 @@ namespace XXHash.Managed
         }*/
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ChooseNumProbes(int millibits_per_key) => 
-            millibits_per_key switch
+        public static int ChooseNumProbes(int millibitsPerKey) => 
+            millibitsPerKey switch
         {
             <= 2080 => 1,
             <= 3580 => 2,
@@ -328,7 +488,7 @@ namespace XXHash.Managed
             <= 22001 => 11,
             <= 25501 => 12,
             > 50000 => 24,
-            _ => (millibits_per_key - 1) / 2000 - 1
+            _ => (millibitsPerKey - 1) / 2000 - 1
         };
 
         // ignore implementation details, gives better rate than the real one

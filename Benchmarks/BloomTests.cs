@@ -6,6 +6,7 @@
     using System.Text;
     using System.Threading.Tasks;
     using BenchmarkDotNet.Attributes;
+    using BloomFilter;
     using XXHash.Managed;
 
     public class BloomTests
@@ -18,20 +19,24 @@
         private string[] existingStrings;
         private BloomFilter bloomFilter;
         private HashSet<string> hashSet;
+        private global::BloomFilter.IBloomFilter bloomFilterNetCore;
 
 
         [GlobalSetup]
         public void GlobalSetup()
         {
             this.bloomFilter = new BloomFilter(millibitsPerKey, sizeInBytes);
+            this.bloomFilterNetCore = FilterBuilder.Build(elementCount, BloomFilter.EstimatedFpRate(elementCount, sizeInBytes, BloomFilter.ChooseNumProbes(14000), 32));
             this.hashSet = new HashSet<string>(elementCount);
             this.existingStrings = new string[elementCount];
 
             for (int i = 0; i < elementCount; ++i)
             {
-                this.bloomFilter.AddHash($"hash{i}");
+                string str = $"hash{i}";
+                this.bloomFilter.AddHash(str);
                 this.hashSet.Add($"hash{i}");
                 this.existingStrings[i] = $"hash{i}";
+                this.bloomFilterNetCore.Add(str);
             }
 
             this.nonExistingStrings = new string[elementCount];
@@ -48,6 +53,19 @@
             for (int i = 0; i < elementCount; ++i)
             {
                 result |= this.bloomFilter.HashMayMatch(this.nonExistingStrings[i]);
+            }
+
+            return result;
+        }
+
+
+        [Benchmark(OperationsPerInvoke = elementCount)]
+        public bool MissingItemsBloomFilterNetCore()
+        {
+            var result = false;
+            for (int i = 0; i < elementCount; ++i)
+            {
+                result |= this.bloomFilterNetCore.Contains(this.nonExistingStrings[i]);
             }
 
             return result;
@@ -72,6 +90,18 @@
             for (int i = 0; i < elementCount; ++i)
             {
                 result |= this.bloomFilter.HashMayMatch(this.existingStrings[i]);
+            }
+
+            return result;
+        }
+
+        [Benchmark(OperationsPerInvoke = elementCount)]
+        public bool ExistingItemsBloomFilterNetCore()
+        {
+            var result = false;
+            for (int i = 0; i < elementCount; ++i)
+            {
+                result |= this.bloomFilterNetCore.Contains(this.existingStrings[i]);
             }
 
             return result;
