@@ -47,6 +47,33 @@
         }
 
         [Benchmark(OperationsPerInvoke = elementCount)]
+        public void AddItemsBloomFilter()
+        {
+            for (int i = 0; i < elementCount; ++i)
+            {
+                this.bloomFilter.AddHash(this.nonExistingStrings[i]);
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = elementCount)]
+        public void AddItemsBloomFilterCore()
+        {
+            for (int i = 0; i < elementCount; ++i)
+            {
+                this.bloomFilterNetCore.Add(this.nonExistingStrings[i]);
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = elementCount)]
+        public void AddItemsHashSet()
+        {
+            for (int i = 0; i < elementCount; ++i)
+            {
+                this.hashSet.Add(this.nonExistingStrings[i]);
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = elementCount)]
         public bool MissingItemsBloomFilter() 
         {
             var result = false;
