@@ -78,4 +78,19 @@ public class StreamingTests
         }
     }
 
+    [Fact]
+    public async ValueTask AppendStreamAsync()
+    {
+        var rand = new Random(1344);
+        var data = new byte[123_123_123];
+        rand.NextBytes(data);
+        var seed = (ulong)rand.NextInt64();
+        var stream = new MemoryStream(data);
+
+        var state = new XXH3State(seed);
+        await state.AppendAsync(stream);
+
+        Assert.Equal(XXHash3.XXH3_64(data, seed), state.GetXXH3_64());
+        Assert.Equal(XXHash3.XXH3_128(data, seed), state.GetXXH3_128());
+    }
 }

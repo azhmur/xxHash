@@ -34,3 +34,6 @@ using var fileStream = File.OpenRead("largefile");
 await state.AppendAsync(fileStream);
 var hash64 = state.GetXXH3_64();
 ```
+
+Calculating current hash value is non destructive and another portion of data can be added afterwise. Just keep in mind feeding very small blocks (like 1 byte) and repeatedly calculating hash value maybe slow.
+Note: This isn't replacement for HashCode.Combne as far as XXH3State is rather big (>500 bytes).
