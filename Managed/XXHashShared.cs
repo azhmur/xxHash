@@ -19,6 +19,9 @@ public static unsafe class XXHashShared
     public const uint XXH3_MIDSIZE_LASTOFFSET = 17;
     public const uint XXH_SECRET_MERGEACCS_START = 11;
     public const uint XXH3_INTERNALBUFFER_SIZE = 256;
+    public const uint XXH3_MIDSIZE_MAX = 240;
+    public const uint XXH_SECRET_LASTACC_START = 7;
+    public const uint SecretLimit = XXH_SECRET_DEFAULT_SIZE - XXH_STRIPE_LEN;
 
     public static ReadOnlySpan<byte> XXH3_kSecret => new byte[] {
         0xb8, 0xfe, 0x6c, 0x39, 0x23, 0xa4, 0x4b, 0xbe, 0x7c, 0x01, 0x81, 0x2c, 0xf7, 0x21, 0xad, 0x1c,

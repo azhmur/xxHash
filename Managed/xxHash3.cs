@@ -1,4 +1,5 @@
 ﻿using System.Buffers.Binary;
+using System.Net.Sockets;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -147,7 +148,7 @@ public unsafe static class XXHash3
     {
         ulong data_val = Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref input, lane * 8));
         ulong data_key = data_val ^ Unsafe.Add(ref secret, lane);
-        Unsafe.Add(ref acc, lane ^1) += data_val;
+        Unsafe.Add(ref acc, lane ^ 1) += data_val;
         Unsafe.Add(ref acc, lane) += XXHashShared.XXH_mult32to64(data_key & 0xFFFFFFFF, data_key >> 32);
     }
 
@@ -365,13 +366,13 @@ public unsafe static class XXHash3
     {
         if (seed64 == 0)
         {
-            return XXH3_hashLong_64b_internal(ref input, len, ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), XXHashShared.XXH_SECRET_DEFAULT_SIZE);
+            return XXH3_hashLong_64b_internal(ref input, len, ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)));
         }
         else
         {
             Span<ulong> customSecret = stackalloc ulong[(int)XXHashShared.XXH_SECRET_DEFAULT_SIZE / sizeof(ulong)];
             XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
-            return XXH3_hashLong_64b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret), XXHashShared.XXH_SECRET_DEFAULT_SIZE);
+            return XXH3_hashLong_64b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret));
         }
     }
 
@@ -484,7 +485,7 @@ public unsafe static class XXHash3
         ulong acc = len * XXHashShared.XXH_PRIME64_1;
         int nbRounds = (int)len / 16;
 
-        for (uint i = 0; i < 8; i++) 
+        for (uint i = 0; i < 8; i++)
         {
             acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, 16 * i), 16 * i, seed);
         }
@@ -537,14 +538,14 @@ public unsafe static class XXHash3
     ////}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong XXH3_hashLong_64b_internal(ref byte input, uint len, ref ulong secret, uint secretSize)
+    private static ulong XXH3_hashLong_64b_internal(ref byte input, uint len, ref ulong secret)
     {
         Span<ulong> acc = stackalloc ulong[(int)XXHashShared.XXH_ACC_NB];
 
         XXHashShared.XXH3_INIT_ACC.CopyTo(acc);
 
-        XXH3_hashLong_internal_loop(ref MemoryMarshal.GetReference(acc), ref input, len, ref secret, secretSize);
-        
+        XXH3_hashLong_internal_loop(ref MemoryMarshal.GetReference(acc), ref input, len, ref secret);
+
         return XXH3_mergeAccs(ref MemoryMarshal.GetReference(acc), ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_MERGEACCS_START), len * XXHashShared.XXH_PRIME64_1);
     }
 
@@ -582,16 +583,16 @@ public unsafe static class XXHash3
     ////}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void XXH3_hashLong_internal_loop(ref ulong acc, ref byte input, uint len, ref ulong secret, uint secretSize)
+    private static void XXH3_hashLong_internal_loop(ref ulong acc, ref byte input, uint len, ref ulong secret)
     {
-        uint nbStripesPerBlock = (secretSize - XXHashShared.XXH_STRIPE_LEN) / XXHashShared.XXH_SECRET_CONSUME_RATE;
-        uint block_len = XXHashShared.XXH_STRIPE_LEN * nbStripesPerBlock;
+        const uint nbStripesPerBlock = (XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN) / XXHashShared.XXH_SECRET_CONSUME_RATE;
+        const uint block_len = XXHashShared.XXH_STRIPE_LEN * nbStripesPerBlock;
         uint nb_blocks = (len - 1) / block_len;
 
         for (var n = 0; n < nb_blocks; n++)
         {
             XXH3_accumulate(ref acc, ref Unsafe.AddByteOffset(ref input, (nuint)n * block_len), ref secret, nbStripesPerBlock);
-            XXH3_scrambleAcc(ref acc, ref Unsafe.AddByteOffset(ref secret, secretSize - XXHashShared.XXH_STRIPE_LEN));
+            XXH3_scrambleAcc(ref acc, ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN));
         }
 
         uint nbStripes = ((len - 1) - (block_len * nb_blocks)) / XXHashShared.XXH_STRIPE_LEN;
@@ -599,8 +600,7 @@ public unsafe static class XXHash3
 
         /* last stripe */
         ref byte p = ref Unsafe.AddByteOffset(ref input, len - XXHashShared.XXH_STRIPE_LEN);
-        const int XXH_SECRET_LASTACC_START = 7; /* not aligned on 8, last secret is different from acc & scrambler */
-        XXH3_accumulate_512(ref acc, ref p, ref Unsafe.AddByteOffset(ref secret, secretSize - XXHashShared.XXH_STRIPE_LEN - XXH_SECRET_LASTACC_START));
+        XXH3_accumulate_512(ref acc, ref p, ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN - XXHashShared.XXH_SECRET_LASTACC_START));
     }
 
     ////static XXH64_hash_t
@@ -710,7 +710,7 @@ public unsafe static class XXHash3
     ////}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void XXH3_initCustomSecret_scalar(ref ulong basicSecret, ref ulong customSecret, ulong seed64)
+    internal static void XXH3_initCustomSecret_scalar(ref ulong basicSecret, ref ulong customSecret, ulong seed64)
     {
         const uint nbRounds = XXHashShared.XXH_SECRET_DEFAULT_SIZE / 16;
 
@@ -1005,10 +1005,10 @@ public unsafe static class XXHash3
         if (len > 8)
             return XXH3_len_9to16_128b(ref input, len, seed);
 
-        if (len >= 4) 
+        if (len >= 4)
             return XXH3_len_4to8_128b(ref input, len, seed);
 
-        if (len > 0) 
+        if (len > 0)
             return XXH3_len_1to3_128b(ref input, len, seed);
 
         XXH128Hash h128;
@@ -1197,7 +1197,7 @@ public unsafe static class XXHash3
         ulong bitfliph = (XXHashShared.GetSecret64(48) ^ XXHashShared.GetSecret64(56)) + seed;
         ulong input_lo = Unsafe.ReadUnaligned<ulong>(ref input);
         ulong input_hi = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input, len - 8));
-        
+
         XXH128Hash m128 = XXHashShared.XXH3_mul128(input_lo ^ input_hi ^ bitflipl, XXHashShared.XXH_PRIME64_1);
         m128.Low += (ulong)(len - 1) << 54;
         input_hi ^= bitfliph;
@@ -1412,7 +1412,7 @@ public unsafe static class XXHash3
         acc.Low = XXHashShared.XXH3_avalanche(acc.Low);
         acc.High = XXHashShared.XXH3_avalanche(acc.High);
 
-        for (uint i = 160; i <= len; i += 32) 
+        for (uint i = 160; i <= len; i += 32)
         {
             acc = XXHashShared.XXH128_mix32B(acc, ref Unsafe.AddByteOffset(ref input, i - 32), ref Unsafe.AddByteOffset(ref input, i - 16), XXHashShared.XXH3_MIDSIZE_STARTOFFSET + i - 160, seed);
         }
@@ -1455,18 +1455,18 @@ public unsafe static class XXHash3
     ////}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static XXH128Hash XXH3_hashLong_128b_internal(ref byte input, uint len, ref ulong secret, uint secretSize)
+    private static XXH128Hash XXH3_hashLong_128b_internal(ref byte input, uint len, ref ulong secret)
     {
         Span<ulong> acc = stackalloc ulong[(int)XXHashShared.XXH_ACC_NB];
 
         XXHashShared.XXH3_INIT_ACC.CopyTo(acc);
 
-        XXH3_hashLong_internal_loop(ref MemoryMarshal.GetReference(acc), ref input, len, ref secret, secretSize);
+        XXH3_hashLong_internal_loop(ref MemoryMarshal.GetReference(acc), ref input, len, ref secret);
 
         XXH128Hash h128;
 
         h128.Low = XXH3_mergeAccs(ref MemoryMarshal.GetReference(acc), ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_MERGEACCS_START), len * XXHashShared.XXH_PRIME64_1);
-        h128.High = XXH3_mergeAccs(ref MemoryMarshal.GetReference(acc), ref Unsafe.AddByteOffset(ref secret, secretSize - XXHashShared.XXH_ACC_NB * sizeof(ulong) - XXHashShared.XXH_SECRET_MERGEACCS_START), ~(len * XXHashShared.XXH_PRIME64_2));
+        h128.High = XXH3_mergeAccs(ref MemoryMarshal.GetReference(acc), ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_ACC_NB * sizeof(ulong) - XXHashShared.XXH_SECRET_MERGEACCS_START), ~(len * XXHashShared.XXH_PRIME64_2));
 
         return h128;
     }
@@ -1476,13 +1476,13 @@ public unsafe static class XXHash3
     {
         if (seed64 == 0)
         {
-            return XXH3_hashLong_128b_internal(ref input, len, ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), XXHashShared.XXH_SECRET_DEFAULT_SIZE);
+            return XXH3_hashLong_128b_internal(ref input, len, ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)));
         }
         else
         {
             Span<ulong> customSecret = stackalloc ulong[(int)XXHashShared.XXH_SECRET_DEFAULT_SIZE / sizeof(ulong)];
             XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
-            return XXH3_hashLong_128b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret), XXHashShared.XXH_SECRET_DEFAULT_SIZE);
+            return XXH3_hashLong_128b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret));
         }
     }
 
@@ -1604,26 +1604,101 @@ public unsafe static class XXHash3
 
     ////    return XXH_OK;
     ////}
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void XXH3_update(ref XXH3State state, ref byte input, uint len) 
+    internal static void XXH3_update(XXH3State state, ref byte input, uint len)
     {
-        uint nbStripesPerBlock = (secretSize - XXHashShared.XXH_STRIPE_LEN) / XXHashShared.XXH_SECRET_CONSUME_RATE;
+        ref var bEnd = ref Unsafe.AddByteOffset(ref input, len);
+        const uint nbStripesPerBlock = (XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN) / XXHashShared.XXH_SECRET_CONSUME_RATE;
+        const uint XXH3_INTERNALBUFFER_STRIPES = XXHashShared.XXH3_INTERNALBUFFER_SIZE / XXHashShared.XXH_STRIPE_LEN;
 
         state.TotalLength += len;
 
         if (state.BufferedSize + len <= XXHashShared.XXH3_INTERNALBUFFER_SIZE) {
-            MemoryMarshal.CreateReadOnlySpan(ref input, (int)len).CopyTo(state.Buffer.AsSpan(..state.BufferedSize));
+            MemoryMarshal.CreateReadOnlySpan(ref input, (int)len).CopyTo(state.Buffer.AsSpan(state.BufferedSize));
             state.BufferedSize += (int)len;
             return;
         }
 
         if (state.BufferedSize > 0) {
             var loadSize = (int)XXHashShared.XXH3_INTERNALBUFFER_SIZE - state.BufferedSize;
-            MemoryMarshal.CreateReadOnlySpan(ref input, loadSize).CopyTo(state.Buffer.AsSpan(..state.BufferedSize));
-            input = Unsafe.AddByteOffset(ref input, loadSize);
+            MemoryMarshal.CreateReadOnlySpan(ref input, loadSize).CopyTo(state.Buffer.AsSpan(state.BufferedSize));
+            input = ref Unsafe.AddByteOffset(ref input, loadSize);
+            XXH3_consumeStripes(
+                ref MemoryMarshal.GetReference<ulong>(state.Accumulator),
+                ref state.NumberOfStripesProcessed,
+                ref MemoryMarshal.GetReference<byte>(state.Buffer),
+                ref MemoryMarshal.GetReference<ulong>(state.CustomSecret),
+                XXH3_INTERNALBUFFER_STRIPES);
             state.BufferedSize = 0;
         }
+
+        var remainingSize = Unsafe.ByteOffset(ref input, ref bEnd);
+        if (remainingSize > nbStripesPerBlock * XXHashShared.XXH_STRIPE_LEN)
+        {
+            var nbStripes = (remainingSize - 1) / XXHashShared.XXH_STRIPE_LEN;
+            var nbStripesToEnd = (uint)(nbStripesPerBlock - state.NumberOfStripesProcessed);
+
+            XXH3_accumulate(
+                ref MemoryMarshal.GetReference<ulong>(state.Accumulator),
+                ref input,
+                ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), (nint)(state.NumberOfStripesProcessed * XXHashShared.XXH_SECRET_CONSUME_RATE)),
+                nbStripesToEnd);
+
+            XXH3_scrambleAcc(
+                ref MemoryMarshal.GetReference<ulong>(state.Accumulator),
+                ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), XXHashShared.SecretLimit));
+
+            state.NumberOfStripesProcessed = 0;
+            input = ref Unsafe.AddByteOffset(ref input, nbStripesToEnd * XXHashShared.XXH_STRIPE_LEN);
+            nbStripes -= nbStripesToEnd;
+
+            while (nbStripes >= nbStripesPerBlock)
+            {
+                XXH3_accumulate(
+                    ref MemoryMarshal.GetReference<ulong>(state.Accumulator),
+                    ref input,
+                    ref MemoryMarshal.GetReference<ulong>(state.CustomSecret),
+                    nbStripesPerBlock);
+
+                XXH3_scrambleAcc(
+                    ref MemoryMarshal.GetReference<ulong>(state.Accumulator),
+                    ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN));
+
+                input = ref Unsafe.AddByteOffset(ref input, nbStripesPerBlock * XXHashShared.XXH_STRIPE_LEN);
+                nbStripes -= nbStripesPerBlock;
+            }
+
+            XXH3_accumulate(ref MemoryMarshal.GetReference<ulong>(state.Accumulator), ref input, ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), (uint)nbStripes);
+
+            input = ref Unsafe.AddByteOffset(ref input, (nint)(nbStripes * XXHashShared.XXH_STRIPE_LEN));
+            state.NumberOfStripesProcessed = (ulong)nbStripes;
+
+            MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AddByteOffset(ref input, -((nint)XXHashShared.XXH_STRIPE_LEN)), (int)XXHashShared.XXH_STRIPE_LEN).CopyTo(state.Buffer.AsSpan(..^(int)XXHashShared.XXH_STRIPE_LEN));
+        }
+        else
+        {
+            if (remainingSize > XXHashShared.XXH3_INTERNALBUFFER_SIZE)
+            {
+                ref var limit = ref Unsafe.AddByteOffset(ref bEnd, -(nint)XXHashShared.XXH3_INTERNALBUFFER_SIZE);
+
+                do
+                {
+                    XXH3_consumeStripes(
+                        ref MemoryMarshal.GetReference<ulong>(state.Accumulator),
+                        ref state.NumberOfStripesProcessed,
+                        ref input,
+                        ref MemoryMarshal.GetReference<ulong>(state.CustomSecret),
+                        XXH3_INTERNALBUFFER_STRIPES);
+
+                    input = ref Unsafe.AddByteOffset(ref input, XXHashShared.XXH3_INTERNALBUFFER_SIZE);
+                }
+                while (Unsafe.IsAddressLessThan(ref input, ref limit));
+
+                MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AddByteOffset(ref input, -((nint)XXHashShared.XXH_STRIPE_LEN)), (int)XXHashShared.XXH_STRIPE_LEN).CopyTo(state.Buffer.AsSpan(^(int)XXHashShared.XXH_STRIPE_LEN));
+            }
+        }
+
+        state.BufferedSize = (int)Unsafe.ByteOffset(ref input, ref bEnd);
+        MemoryMarshal.CreateReadOnlySpan(ref input, state.BufferedSize).CopyTo(state.Buffer);
     }
 
     /////* Note : when XXH3_consumeStripes() is invoked,
@@ -1653,17 +1728,169 @@ public unsafe static class XXHash3
     ////    }
     ////}
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void XXH3_consumeStripes(ref ulong acc, ref ulong numberOfStripesProcessed, ulong stripesPerBlock, ref byte input, ref ulong secret, uint numberOfStripes) 
+    private static void XXH3_consumeStripes(ref ulong acc, ref ulong nbStripesSoFar, ref byte input, ref ulong secret, uint nbStripes)
     {
-        uint nbStripesPerBlock = (XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN) / XXHashShared.XXH_SECRET_CONSUME_RATE;
+        const uint nbStripesPerBlock = (XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN) / XXHashShared.XXH_SECRET_CONSUME_RATE;
 
-        if (true) 
+        if (nbStripesPerBlock - nbStripesSoFar <= nbStripes)
         {
+            var nbStripesToEndofBlock = (uint)(nbStripesPerBlock - nbStripesSoFar);
+            var nbStripesAfterBlock = nbStripes - nbStripesToEndofBlock;
+            XXH3_accumulate(ref acc, ref input, ref Unsafe.AddByteOffset(ref secret, (nint)(nbStripesSoFar * XXHashShared.XXH_SECRET_CONSUME_RATE)), nbStripesToEndofBlock);
+            XXH3_scrambleAcc(ref acc, ref Unsafe.AddByteOffset(ref secret, XXHashShared.SecretLimit));
+            XXH3_accumulate(ref acc, ref Unsafe.AddByteOffset(ref input, nbStripesToEndofBlock * XXHashShared.XXH_STRIPE_LEN), ref secret, nbStripesAfterBlock);
+            nbStripesSoFar = nbStripesAfterBlock;
         }
-        else 
+        else
         {
-            XXH3_accumulate(ref acc, ref input, ref Unsafe.AddByteOffset(ref secret, (nuint)numberOfStripesProcessed * XXHashShared.XXH_SECRET_CONSUME_RATE), numberOfStripes);
-            numberOfStripesProcessed += numberOfStripes;
+            XXH3_accumulate(ref acc, ref input, ref Unsafe.AddByteOffset(ref secret, (nuint)nbStripesSoFar * XXHashShared.XXH_SECRET_CONSUME_RATE), nbStripes);
+            nbStripesSoFar += nbStripes;
+        }
+    }
+
+    ////XXH_PUBLIC_API XXH64_hash_t XXH3_64bits_digest(XXH_NOESCAPE const XXH3_state_t* state)
+    ////{
+    ////    const unsigned char* const secret = (state->extSecret == NULL) ? state->customSecret : state->extSecret;
+    ////    if (state->totalLen > XXH3_MIDSIZE_MAX) {
+    ////        XXH_ALIGN(XXH_ACC_ALIGN) XXH64_hash_t acc[XXH_ACC_NB];
+    ////    XXH3_digest_long(acc, state, secret);
+    ////        return XXH3_mergeAccs(acc,
+    ////                              secret + XXH_SECRET_MERGEACCS_START,
+    ////                              (xxh_u64) state->totalLen* XXH_PRIME64_1);
+    ////}
+    ////    /* totalLen <= XXH3_MIDSIZE_MAX: digesting a short input */
+    ////    if (state->useSeed)
+    ////        return XXH3_64bits_withSeed(state->buffer, (size_t) state->totalLen, state->seed);
+    ////    return XXH3_64bits_withSecret(state->buffer, (size_t)(state->totalLen),
+    ////                                  secret, state->secretLimit + XXH_STRIPE_LEN);
+    ////}
+    internal static ulong XXH3_64bits_digest(XXH3State state)
+    {
+        if (state.TotalLength > XXHashShared.XXH3_MIDSIZE_MAX)
+        {
+            Span<ulong> acc = stackalloc ulong[(int)XXHashShared.XXH_ACC_NB];
+            XXH3_digest_long(ref MemoryMarshal.GetReference(acc), state);
+            return XXH3_mergeAccs(
+                ref MemoryMarshal.GetReference(acc),
+                ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), XXHashShared.XXH_SECRET_MERGEACCS_START),
+                state.TotalLength * XXHashShared.XXH_PRIME64_1);
+        }
+
+        return XXH3_64(ref MemoryMarshal.GetReference<byte>(state.Buffer), (uint)state.TotalLength, state.Seed);
+    }
+
+    /////*! @ingroup XXH3_family */
+    ////XXH_PUBLIC_API XXH128_hash_t XXH3_128bits_digest (XXH_NOESCAPE const XXH3_state_t* state)
+    ////{
+    ////    const unsigned char* const secret = (state->extSecret == NULL) ? state->customSecret : state->extSecret;
+    ////    if (state->totalLen > XXH3_MIDSIZE_MAX) {
+    ////        XXH_ALIGN(XXH_ACC_ALIGN) XXH64_hash_t acc[XXH_ACC_NB];
+    ////        XXH3_digest_long(acc, state, secret);
+    ////        XXH_ASSERT(state->secretLimit + XXH_STRIPE_LEN >= sizeof(acc) + XXH_SECRET_MERGEACCS_START);
+    ////        {   XXH128_hash_t h128;
+    ////            h128.low64  = XXH3_mergeAccs(acc,
+    ////                                         secret + XXH_SECRET_MERGEACCS_START,
+    ////                                         (xxh_u64)state->totalLen * XXH_PRIME64_1);
+    ////            h128.high64 = XXH3_mergeAccs(acc,
+    ////                                         secret + state->secretLimit + XXH_STRIPE_LEN
+    ////                                                - sizeof(acc) - XXH_SECRET_MERGEACCS_START,
+    ////                                         ~((xxh_u64)state->totalLen * XXH_PRIME64_2));
+    ////            return h128;
+    ////        }
+    ////    }
+    ////    /* len <= XXH3_MIDSIZE_MAX : short code */
+    ////    if (state->seed)
+    ////        return XXH3_128bits_withSeed(state->buffer, (size_t)state->totalLen, state->seed);
+    ////    return XXH3_128bits_withSecret(state->buffer, (size_t)(state->totalLen),
+    ////                                   secret, state->secretLimit + XXH_STRIPE_LEN);
+    ////}
+
+    internal static XXH128Hash XXH3_128bits_digest(XXH3State state)
+    {
+        if (state.TotalLength > XXHashShared.XXH3_MIDSIZE_MAX)
+        {
+            Span<ulong> acc = stackalloc ulong[(int)XXHashShared.XXH_ACC_NB];
+            XXH3_digest_long(ref MemoryMarshal.GetReference(acc), state);
+            return new XXH128Hash()
+            {
+                Low = XXH3_mergeAccs(
+                    ref MemoryMarshal.GetReference(acc),
+                    ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), XXHashShared.XXH_SECRET_MERGEACCS_START),
+                    state.TotalLength * XXHashShared.XXH_PRIME64_1),
+                High = XXH3_mergeAccs(
+                    ref MemoryMarshal.GetReference(acc), 
+                    ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_ACC_NB * sizeof(ulong) - XXHashShared.XXH_SECRET_MERGEACCS_START), 
+                    ~(state.TotalLength * XXHashShared.XXH_PRIME64_2))
+            };
+        }
+
+        return XXH3_128(ref MemoryMarshal.GetReference<byte>(state.Buffer), (uint)state.TotalLength, state.Seed);
+    }
+
+    ////XXH_FORCE_INLINE void
+    ////XXH3_digest_long (XXH64_hash_t* acc,
+    ////                  const XXH3_state_t* state,
+    ////                  const unsigned char* secret)
+    ////{
+    ////    /*
+    ////     * Digest on a local copy. This way, the state remains unaltered, and it can
+    ////     * continue ingesting more input afterwards.
+    ////     */
+    ////    XXH_memcpy(acc, state->acc, sizeof(state->acc));
+    ////    if (state->bufferedSize >= XXH_STRIPE_LEN) {
+    ////        size_t const nbStripes = (state->bufferedSize - 1) / XXH_STRIPE_LEN;
+    ////        size_t nbStripesSoFar = state->nbStripesSoFar;
+    ////        XXH3_consumeStripes(acc,
+    ////                           &nbStripesSoFar, state->nbStripesPerBlock,
+    ////                            state->buffer, nbStripes,
+    ////                            secret, state->secretLimit,
+    ////                            XXH3_accumulate, XXH3_scrambleAcc);
+    ////        /* last stripe */
+    ////        XXH3_accumulate_512(acc,
+    ////                            state->buffer + state->bufferedSize - XXH_STRIPE_LEN,
+    ////                            secret + state->secretLimit - XXH_SECRET_LASTACC_START);
+    ////    } else {  /* bufferedSize < XXH_STRIPE_LEN */
+    ////        xxh_u8 lastStripe[XXH_STRIPE_LEN];
+    ////        size_t const catchupSize = XXH_STRIPE_LEN - state->bufferedSize;
+    ////        XXH_ASSERT(state->bufferedSize > 0);  /* there is always some input buffered */
+    ////        XXH_memcpy(lastStripe, state->buffer + sizeof(state->buffer) - catchupSize, catchupSize);
+    ////        XXH_memcpy(lastStripe + catchupSize, state->buffer, state->bufferedSize);
+    ////        XXH3_accumulate_512(acc,
+    ////                            lastStripe,
+    ////                            secret + state->secretLimit - XXH_SECRET_LASTACC_START);
+    ////    }
+    ////}
+    private static void XXH3_digest_long(ref ulong acc, XXH3State state)
+    {
+        Unsafe.CopyBlock(ref Unsafe.As<ulong, byte>(ref acc), ref Unsafe.As<ulong, byte>(ref MemoryMarshal.GetReference<ulong>(state.Accumulator)), XXHashShared.XXH_STRIPE_LEN);
+        
+        if (state.BufferedSize >= XXHashShared.XXH_STRIPE_LEN)
+        {
+            var nbStripesSoFar = state.NumberOfStripesProcessed;
+
+            XXH3_consumeStripes(
+                ref acc,
+                ref nbStripesSoFar,
+                ref MemoryMarshal.GetReference<byte>(state.Buffer),
+                ref MemoryMarshal.GetReference<ulong>(state.CustomSecret),
+                ((uint)state.BufferedSize - 1) / XXHashShared.XXH_STRIPE_LEN);
+
+            XXH3_accumulate_512(
+                ref acc,
+                ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<byte>(state.Buffer), (uint)state.BufferedSize - XXHashShared.XXH_STRIPE_LEN),
+                ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), XXHashShared.SecretLimit - XXHashShared.XXH_SECRET_LASTACC_START));
+        }
+        else
+        {
+            Span<byte> lastStripe = stackalloc byte[(int)XXHashShared.XXH_STRIPE_LEN];
+            var catchupSize = (int)XXHashShared.XXH_STRIPE_LEN - state.BufferedSize;
+            state.Buffer.AsSpan(^catchupSize).CopyTo(lastStripe);
+            state.Buffer.AsSpan(0, state.BufferedSize).CopyTo(lastStripe[catchupSize..]);
+
+            XXH3_accumulate_512(
+                ref acc,
+                ref MemoryMarshal.GetReference(lastStripe),
+                ref Unsafe.AddByteOffset(ref MemoryMarshal.GetReference<ulong>(state.CustomSecret), XXHashShared.SecretLimit - XXHashShared.XXH_SECRET_LASTACC_START));
         }
     }
 }
