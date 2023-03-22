@@ -109,30 +109,99 @@ public class XXH3State {
         XXHash3.XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference<ulong>(this.CustomSecret), seed);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ulong GetXXH3_64()
     {
         return XXHash3.XXH3_64bits_digest(this);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public XXH128Hash GetXXH3_128()
     {
         return XXHash3.XXH3_128bits_digest(this);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Append(byte[] data)
     {
         XXHash3.XXH3_update(this, ref MemoryMarshal.GetReference<byte>(data), (uint)data.Length);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Append(ReadOnlySpan<byte> data)
     {
         XXHash3.XXH3_update(this, ref MemoryMarshal.GetReference<byte>(data), (uint)data.Length);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Append(ReadOnlyMemory<byte> data)
     {
         XXHash3.XXH3_update(this, ref MemoryMarshal.GetReference<byte>(data.Span), (uint)data.Length);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(ReadOnlySpan<char> data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(data)), ((uint)data.Length) * 2);
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(short data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<short, byte>(ref data), sizeof(short));
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(ushort data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<ushort, byte>(ref data), sizeof(ushort));
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(int data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<int, byte>(ref data), sizeof(int));
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(long data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<long, byte>(ref data), sizeof(long));
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(uint data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<uint, byte>(ref data), sizeof(uint));
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(ulong data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<ulong, byte>(ref data), sizeof(ulong));
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(UInt128 data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<UInt128, byte>(ref data), (uint)Unsafe.SizeOf<UInt128>());
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Append(Int128 data)
+    {
+        XXHash3.XXH3_update(this, ref Unsafe.As<Int128, byte>(ref data), (uint)Unsafe.SizeOf<Int128>());
+    }
+
+    // decimal, double, float, datetime, timespan require complex conversion to match their equality rules
 
     public void Append(ReadOnlySequence<byte> data)
     {

@@ -20,36 +20,20 @@ public struct XXH128Hash : IEquatable<XXH128Hash>
                this.Low == other.Low;
     }
 
-    public static bool operator ==(XXH128Hash left, XXH128Hash right)
-    {
-        return left.Equals(right);
-    }
+    public static bool operator ==(XXH128Hash left, XXH128Hash right) => left.Equals(right);
 
-    public static bool operator !=(XXH128Hash left, XXH128Hash right)
-    {
-        return !left.Equals(right);
-    }
+    public static bool operator !=(XXH128Hash left, XXH128Hash right) => !left.Equals(right);
 
     // SLOW AND UNSTABLE!
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(High, Low);
-    }
+    public override int GetHashCode() => HashCode.Combine(High, Low);
 
-    public bool Equals(XXH128Hash other)
-    {
-        return this.High == other.High && this.Low == other.Low;
-    }
+    public bool Equals(XXH128Hash other) => this.High == other.High && this.Low == other.Low;
 
-    public override string? ToString()
-    {
-        return $"{High:X16}{Low:X16}";
-    }
+    public override string? ToString() => $"{High:X16}{Low:X16}";
 
-    public UInt128 ToUInt128()
-    {
-        return new UInt128(High, Low);
-    }
+    public UInt128 ToUInt128() => new (High, Low);
+
+    public static implicit operator UInt128(XXH128Hash value) => new (value.High, value.Low);
 
     public void Deconstruct(out ulong low, out ulong high)
     {

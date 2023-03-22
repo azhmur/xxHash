@@ -342,6 +342,160 @@ public unsafe static class XXHash3
         return XXH3_64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(data)), (uint)(data.Length * 2), seed);
     }
 
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(short data, ulong seed)
+    {
+        return XXH3_64(ref Unsafe.As<short, byte>(ref data), sizeof(short), seed);
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(ushort data, ulong seed)
+    {
+        return XXH3_64(ref Unsafe.As<ushort, byte>(ref data), sizeof(ushort), seed);
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(int data, ulong seed)
+    {
+        return XXH3_64(ref Unsafe.As<int, byte>(ref data), sizeof(int), seed);
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(uint data, ulong seed)
+    {
+        return XXH3_64(ref Unsafe.As<uint, byte>(ref data), sizeof(uint), seed);
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(long data, ulong seed)
+    {
+        return XXH3_64(ref Unsafe.As<long, byte>(ref data), sizeof(long), seed);
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(ulong data, ulong seed)
+    {
+        return XXH3_64(ref Unsafe.As<ulong, byte>(ref data), sizeof(ulong), seed);
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(UInt128 data, ulong seed)
+    {
+        return XXH3_64(ref Unsafe.As<UInt128, byte>(ref data), (uint)Unsafe.SizeOf<UInt128>(), seed);
+    }
+
+    // this is slow method, use of larger chunks is recomended
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(Int128 data, ulong seed)
+    {
+        return XXH3_64(ref Unsafe.As<Int128, byte>(ref data), (uint)Unsafe.SizeOf<Int128>(), seed);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(int data1, int data2, ulong seed)
+    {
+        Span<int> data = stackalloc int[2];
+        
+        data[0] = data1;
+        data[1] = data2;
+
+        return XXH3_64(ref Unsafe.As<int, byte>(ref MemoryMarshal.GetReference(data)), 2 * sizeof(int), seed);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(int data1, int data2, int data3, ulong seed)
+    {
+        Span<int> data = stackalloc int[3];
+
+        data[0] = data1;
+        data[1] = data2;
+        data[2] = data3;
+
+        return XXH3_64(ref Unsafe.As<int, byte>(ref MemoryMarshal.GetReference(data)), 3 * sizeof(int), seed);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(int data1, int data2, int data3, int data4, ulong seed)
+    {
+        Span<int> data = stackalloc int[4];
+
+        data[0] = data1;
+        data[1] = data2;
+        data[2] = data3;
+        data[3] = data4;
+
+        return XXH3_64(ref Unsafe.As<int, byte>(ref MemoryMarshal.GetReference(data)), 4 * sizeof(int), seed);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(int data1, int data2, int data3, int data4, int data5, ulong seed)
+    {
+        Span<int> data = stackalloc int[5];
+
+        data[0] = data1;
+        data[1] = data2;
+        data[2] = data3;
+        data[3] = data4;
+        data[4] = data5;
+
+        return XXH3_64(ref Unsafe.As<int, byte>(ref MemoryMarshal.GetReference(data)), 5 * sizeof(int), seed);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(int data1, int data2, int data3, int data4, int data5, int data6, ulong seed)
+    {
+        Span<int> data = stackalloc int[6];
+
+        data[0] = data1;
+        data[1] = data2;
+        data[2] = data3;
+        data[3] = data4;
+        data[4] = data5;
+        data[5] = data6;
+
+        return XXH3_64(ref Unsafe.As<int, byte>(ref MemoryMarshal.GetReference(data)), 6 * sizeof(int), seed);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(int data1, int data2, int data3, int data4, int data5, int data6, int data7, ulong seed)
+    {
+        Span<int> data = stackalloc int[7];
+
+        data[0] = data1;
+        data[1] = data2;
+        data[2] = data3;
+        data[3] = data4;
+        data[4] = data5;
+        data[5] = data6;
+        data[6] = data7;
+
+        return XXH3_64(ref Unsafe.As<int, byte>(ref MemoryMarshal.GetReference(data)), 7 * sizeof(int), seed);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ulong XXH3_64(int data1, int data2, int data3, int data4, int data5, int data6, int data7, int data8, ulong seed)
+    {
+        Span<int> data = stackalloc int[8];
+
+        data[0] = data1;
+        data[1] = data2;
+        data[2] = data3;
+        data[3] = data4;
+        data[4] = data5;
+        data[5] = data6;
+        data[6] = data7;
+        data[7] = data8;
+
+        return XXH3_64(ref Unsafe.As<int, byte>(ref MemoryMarshal.GetReference(data)), 8 * sizeof(int), seed);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
     private static ulong XXH3_64(ref byte input, uint len, ulong seed64)
     {
