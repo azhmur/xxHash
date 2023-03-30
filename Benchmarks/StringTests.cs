@@ -17,7 +17,7 @@ public class StringTests
 {
     private static readonly ulong seed = unchecked((ulong)Random.Shared.NextInt64());
 
-    [Params(/*1,2,3,4,5,6,7,*/8/*,9,10,11,12,13,14,15,16,51200*/)]
+    [Params(1/*,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,1 << 20*/)]
     public int length;
 
     public string str;
@@ -31,52 +31,52 @@ public class StringTests
         str = Encoding.ASCII.GetString(bytes);
     }
 
-    [Benchmark]
+    //[Benchmark]
     public void StringGetHashCode() => str.GetHashCode();
 
-    [Benchmark]
+    //[Benchmark]
     public ulong K4osXXhash64() => K4os.Hash.xxHash.XXH64.DigestOf(MemoryMarshal.AsBytes(str.AsSpan()));
 
-    [Benchmark]
+    //[Benchmark]
     public ulong StandartXXHash64()
     {
         var bytes = MemoryMarshal.AsBytes(str.AsSpan());
         return Standart.Hash.xxHash.xxHash64.ComputeHash(bytes, bytes.Length);
     }
 
-    [Benchmark]
+    //[Benchmark]
     public ulong StandartXXHash3()
     {
         var bytes = MemoryMarshal.AsBytes(str.AsSpan());
         return Standart.Hash.xxHash.xxHash3.ComputeHash(bytes, bytes.Length);
     }
 
-    [Benchmark]
+    //[Benchmark]
     public Standart.Hash.xxHash.uint128 StandartXXHash3_128()
     {
         var bytes = MemoryMarshal.AsBytes(str.AsSpan());
         return Standart.Hash.xxHash.xxHash128.ComputeHash(bytes, bytes.Length);
     }
 
-    [Benchmark]
+    //[Benchmark]
     public ulong Wyhash() => WyHash.WyHash64.ComputeHash64(MemoryMarshal.AsBytes(str.AsSpan()));
 
-    [Benchmark]
+    //[Benchmark]
     public ulong xxh3_64_Native() => XXHashNative.XXHash3_64(str, seed);
 
-    [Benchmark]
+    //[Benchmark]
     public XXH128_hash_t xxh3_128_Native() => XXHashNative.XXHash3_128(str, seed);
 
-    [Benchmark]
+    //[Benchmark]
     public ulong Xxh3Net() => XXHash3NET.XXHash3.Hash64(MemoryMarshal.Cast<char, byte>(str.AsSpan()), seed);
 
     [Benchmark()]
     public XXH128Hash Xxh3_128_NewManaged() => XXHash3.XXH3_128(str, seed);
 
-    [Benchmark(Baseline = true)]
+    //[Benchmark(Baseline = true)]
     public ulong Xxh3_NewManaged() => XXHash3.XXH3_64(str, seed);
 
-    [Benchmark()]
+    //[Benchmark()]
     public ulong Xxh64_NewManaged() => XXHash64.XXH64(str, seed);
 
     //[Benchmark]
@@ -87,13 +87,13 @@ public class StringTests
         return hashCode.ToHashCode();
     }
 
-    [Benchmark]
+    //[Benchmark]
     public int GetNonRandomizedHashCode() => GetNonRandomizedHashCode(this.str);
 
-    [Benchmark]
+    //[Benchmark]
     public ulong SystemXXHash64() => System.IO.Hashing.XxHash64.HashToUInt64(MemoryMarshal.AsBytes(str.AsSpan()), (long)seed);
 
-    [Benchmark]
+    //[Benchmark]
     public ulong SystemXXHash3_64() => System.IO.Hashing.XxHash3.HashToUInt64(MemoryMarshal.AsBytes(str.AsSpan()), (long)seed);
 
     [Benchmark]
@@ -128,7 +128,7 @@ public class StringTests
         }
     }
 
-    [Benchmark]
+    //[Benchmark]
     public byte[] GetHashCodeSha256()
     {
         var result = new byte[32];

@@ -9,7 +9,7 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        BloomFilterTest();
+        Validate();
     }
 
     static void RandomTest()

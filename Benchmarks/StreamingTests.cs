@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO.Hashing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,10 +25,13 @@ public class StreamingTests
     }
 
     [Benchmark(Baseline = true)]
-    public ulong Bulk() => XXHash3.XXH3_64(data, seed);
+    public ulong Bulk_Managed() => XXHash3.XXH3_64(data, seed);
 
     [Benchmark()]
-    public ulong Streaming()
+    public ulong Bulk_System() => XxHash3.HashToUInt64(data, (long)seed);
+
+    [Benchmark()]
+    public ulong Streaming_Managed()
     {
         var blockStart = 0;
         var blockEnd = 0;
@@ -44,4 +48,24 @@ public class StreamingTests
 
         return state.GetXXH3_64();
     }
+
+    [Benchmark()]
+    public ulong Streaming_System()
+    {
+        var blockStart = 0;
+        var blockEnd = 0;
+        const int blockSize = 1 << 12;
+        var state = new XxHash3((long)this.seed);
+
+        while (blockEnd < data.Length)
+        {
+            blockEnd = Math.Min(blockEnd + blockSize, this.data.Length);
+
+            state.Append(this.data.AsSpan(blockStart..blockEnd));
+            blockStart = blockEnd;
+        }
+
+        return state.GetCurrentHashAsUInt64();
+    }
+
 }

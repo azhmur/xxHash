@@ -1153,7 +1153,7 @@ public unsafe static class XXHash3
     ////    }   }
     ////}
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static XXH128Hash XXH3_len_0to16_128b(ref byte input, uint len, ulong seed)
     {
         if (len > 8)
@@ -1165,12 +1165,9 @@ public unsafe static class XXHash3
         if (len > 0)
             return XXH3_len_1to3_128b(ref input, len, seed);
 
-        XXH128Hash h128;
-        ulong bitflipl = XXHashShared.GetSecret64(64) ^ XXHashShared.GetSecret64(72);
-        ulong bitfliph = XXHashShared.GetSecret64(80) ^ XXHashShared.GetSecret64(88);
-        h128.Low = XXHashShared.XXH64_avalanche(seed ^ bitflipl);
-        h128.High = XXHashShared.XXH64_avalanche(seed ^ bitfliph);
-        return h128;
+        const ulong bitflipl = 7507096552062056628;
+        const ulong bitfliph = 10832796526425111881;
+        return new XXH128Hash(XXHashShared.XXH64_avalanche(seed ^ bitflipl), XXHashShared.XXH64_avalanche(seed ^ bitfliph));
     }
 
     ////XXH_FORCE_INLINE XXH_PUREF XXH128_hash_t
@@ -1202,7 +1199,7 @@ public unsafe static class XXHash3
     ////    }
     ////}
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static XXH128Hash XXH3_len_1to3_128b(ref byte input, uint len, ulong seed)
     {
         byte c1 = input;
@@ -1211,16 +1208,12 @@ public unsafe static class XXHash3
 
         uint combinedl = ((uint)c1 << 16) | ((uint)c2 << 24) | ((uint)c3 << 0) | ((uint)len << 8);
         uint combinedh = BitOperations.RotateLeft(BinaryPrimitives.ReverseEndianness(combinedl), 13);
-        ulong bitflipl = (XXHashShared.GetSecret32(0) ^ XXHashShared.GetSecret32(4)) + seed;
-        ulong bitfliph = (XXHashShared.GetSecret32(8) ^ XXHashShared.GetSecret32(12)) - seed;
+        ulong bitflipl = 2267503259 + seed;
+        ulong bitfliph = 808198283 - seed;
         ulong keyed_lo = (ulong)combinedl ^ bitflipl;
         ulong keyed_hi = (ulong)combinedh ^ bitfliph;
 
-        return new XXH128Hash()
-        {
-            High = XXHashShared.XXH64_avalanche(keyed_hi),
-            Low = XXHashShared.XXH64_avalanche(keyed_lo)
-        };
+        return new XXH128Hash(XXHashShared.XXH64_avalanche(keyed_lo), XXHashShared.XXH64_avalanche(keyed_hi));
     }
 
     ////XXH_FORCE_INLINE XXH_PUREF XXH128_hash_t
@@ -1388,7 +1381,7 @@ public unsafe static class XXHash3
     ////    return f_hl128(input, len, seed64, secret, secretLen);
     ////}
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static XXH128Hash XXH3_128(ref byte input, uint len, ulong seed64)
     {
         if (len <= 16)
@@ -1475,13 +1468,13 @@ public unsafe static class XXHash3
             {
                 if (len > 96)
                 {
-                    acc = XXHashShared.XXH128_mix32B(acc, ref Unsafe.AddByteOffset(ref input, 48), ref Unsafe.AddByteOffset(ref input, len - 64), 96, seed);
+                    XXHashShared.XXH128_mix32B(ref acc, ref Unsafe.AddByteOffset(ref input, 48), ref Unsafe.AddByteOffset(ref input, len - 64), 96, seed);
                 }
-                acc = XXHashShared.XXH128_mix32B(acc, ref Unsafe.AddByteOffset(ref input, 32), ref Unsafe.AddByteOffset(ref input, len - 48), 64, seed);
+                XXHashShared.XXH128_mix32B(ref acc, ref Unsafe.AddByteOffset(ref input, 32), ref Unsafe.AddByteOffset(ref input, len - 48), 64, seed);
             }
-            acc = XXHashShared.XXH128_mix32B(acc, ref Unsafe.AddByteOffset(ref input, 16), ref Unsafe.AddByteOffset(ref input, len - 32), 32, seed);
+            XXHashShared.XXH128_mix32B(ref acc, ref Unsafe.AddByteOffset(ref input, 16), ref Unsafe.AddByteOffset(ref input, len - 32), 32, seed);
         }
-        acc = XXHashShared.XXH128_mix32B(acc, ref input, ref Unsafe.AddByteOffset(ref input, len - 16), 0, seed);
+        XXHashShared.XXH128_mix32B(ref acc, ref input, ref Unsafe.AddByteOffset(ref input, len - 16), 0, seed);
 
         XXH128Hash h128;
         h128.Low = acc.Low + acc.High;
@@ -1560,7 +1553,7 @@ public unsafe static class XXHash3
 
         for (uint i = 32; i < 160; i += 32)
         {
-            acc = XXHashShared.XXH128_mix32B(acc, ref Unsafe.AddByteOffset(ref input, i - 32), ref Unsafe.AddByteOffset(ref input, i - 16), i - 32, seed);
+            XXHashShared.XXH128_mix32B(ref acc, ref Unsafe.AddByteOffset(ref input, i - 32), ref Unsafe.AddByteOffset(ref input, i - 16), i - 32, seed);
         }
 
         acc.Low = XXHashShared.XXH3_avalanche(acc.Low);
@@ -1568,10 +1561,10 @@ public unsafe static class XXHash3
 
         for (uint i = 160; i <= len; i += 32)
         {
-            acc = XXHashShared.XXH128_mix32B(acc, ref Unsafe.AddByteOffset(ref input, i - 32), ref Unsafe.AddByteOffset(ref input, i - 16), XXHashShared.XXH3_MIDSIZE_STARTOFFSET + i - 160, seed);
+            XXHashShared.XXH128_mix32B(ref acc, ref Unsafe.AddByteOffset(ref input, i - 32), ref Unsafe.AddByteOffset(ref input, i - 16), XXHashShared.XXH3_MIDSIZE_STARTOFFSET + i - 160, seed);
         }
 
-        acc = XXHashShared.XXH128_mix32B(acc, ref Unsafe.AddByteOffset(ref input, len - 16), ref Unsafe.AddByteOffset(ref input, len - 32), XXHashShared.XXH3_SECRET_SIZE_MIN - XXHashShared.XXH3_MIDSIZE_LASTOFFSET - 16, 0 - seed);
+        XXHashShared.XXH128_mix32B(ref acc, ref Unsafe.AddByteOffset(ref input, len - 16), ref Unsafe.AddByteOffset(ref input, len - 32), XXHashShared.XXH3_SECRET_SIZE_MIN - XXHashShared.XXH3_MIDSIZE_LASTOFFSET - 16, 0 - seed);
 
         XXH128Hash h128;
         h128.Low = acc.Low + acc.High;

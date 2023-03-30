@@ -7,11 +7,16 @@ using System.Threading.Tasks;
 
 namespace XXHash.Managed;
 
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct XXH128Hash : IEquatable<XXH128Hash>
 {
     public ulong Low; 
     public ulong High;
+
+    public XXH128Hash(ulong low, ulong high)
+    {
+        High = high; 
+        Low = low;
+    }
 
     public override bool Equals(object? obj)
     {

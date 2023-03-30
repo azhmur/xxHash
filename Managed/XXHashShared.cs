@@ -254,12 +254,11 @@ public static unsafe class XXHashShared
     ////}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static XXH128Hash XXH128_mix32B(XXH128Hash acc, ref byte input_1, ref byte input_2, uint secretOffset, ulong seed)
+    public static void XXH128_mix32B(ref XXH128Hash acc, ref byte input_1, ref byte input_2, uint secretOffset, ulong seed)
     {
         acc.Low += XXH3_mix16B(ref input_1, secretOffset, seed);
         acc.Low ^= Unsafe.ReadUnaligned<ulong>(ref input_2) + Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input_2, 8));
         acc.High += XXH3_mix16B(ref input_2, secretOffset + 16, seed);
         acc.High ^= Unsafe.ReadUnaligned<ulong>(ref input_1) + Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input_1, 8));
-        return acc;
     }
 }

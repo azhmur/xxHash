@@ -1,5 +1,5 @@
 # xxHash3
-Fastest (2022-06-14) C#/NET implementation of Yan Collets XXHash64 and XXHash3_64 hash functions.
+MS backed implementation (https://www.nuget.org/packages/System.IO.Hashing/) is recommended over this library as it is faster and better supported.
 
 Nuget packets:
 
@@ -7,16 +7,13 @@ https://www.nuget.org/packages/XXHash.Native/ (Windows-x64, Linux-x64 SSE2)
 
 https://www.nuget.org/packages/XXHash.Managed/
 
-![Small strings](XXHash64%20vs%20XXHash3.png)
-![Large string](XXHash64%20vs%20XXHash3%20Large.png)
-
 Yan Collet reference C implementation: https://github.com/Cyan4973/xxHash
 
 Alexander Melnik port: https://github.com/uranium62/xxHash
 
 Milosz Krajewski port: https://github.com/MiloszKrajewski/K4os.Hash.xxHash
 
-Microsoft port (recommended if you don't care that much about performance, XXH3 expected in .net 8): https://github.com/dotnet/runtime/tree/main/src/libraries/System.IO.Hashing/src/System/IO/Hashing
+Microsoft port: https://github.com/dotnet/runtime/tree/main/src/libraries/System.IO.Hashing/src/System/IO/Hashing
 
 There are some others implementations available on nuget, but they are much slower or produce incorrect results.
 
@@ -26,7 +23,7 @@ BloomFilter avx2 optimized implementation is taken from Rocksdb. It can be hard 
 
 # XXH3 Streaming mode
 
-In case your input is larger than MaxArraySize in dotnet (~ 2 GiB), or it doesn't represented as continous block of memory at once you should use streaming mode.
+In case your input is larger than MaxArraySize in dotnet (~ 2 GiB), or it doesn't represented as continuous block of memory at once you should use streaming mode.
 
 ```CSharp
 var state = new XXH3State(seed: 10);
