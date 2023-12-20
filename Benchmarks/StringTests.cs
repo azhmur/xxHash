@@ -17,7 +17,7 @@ public class StringTests
 {
     private static readonly ulong seed = unchecked((ulong)Random.Shared.NextInt64());
 
-    [Params(1/*,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,1 << 20*/)]
+    [Params(1,7,15,1 << 20)]
     public int length;
 
     public string str;
@@ -73,7 +73,7 @@ public class StringTests
     [Benchmark()]
     public XXH128Hash Xxh3_128_NewManaged() => XXHash3.XXH3_128(str, seed);
 
-    //[Benchmark(Baseline = true)]
+    [Benchmark(Baseline = true)]
     public ulong Xxh3_NewManaged() => XXHash3.XXH3_64(str, seed);
 
     //[Benchmark()]
@@ -93,7 +93,7 @@ public class StringTests
     //[Benchmark]
     public ulong SystemXXHash64() => System.IO.Hashing.XxHash64.HashToUInt64(MemoryMarshal.AsBytes(str.AsSpan()), (long)seed);
 
-    //[Benchmark]
+    [Benchmark]
     public ulong SystemXXHash3_64() => System.IO.Hashing.XxHash3.HashToUInt64(MemoryMarshal.AsBytes(str.AsSpan()), (long)seed);
 
     [Benchmark]

@@ -79,7 +79,7 @@ public class StreamingTests
     }
 
     [Fact]
-    public async ValueTask AppendStreamAsync()
+    public async Task AppendStreamAsync()
     {
         var rand = new Random(1344);
         var data = new byte[123_123_123];
