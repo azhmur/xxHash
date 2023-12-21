@@ -2,37 +2,37 @@
 
 namespace XXHash.Native;
 
-internal static class Native
+internal static partial class Native
 {
-    [DllImport("xxhash", SetLastError = false)]
+    [LibraryImport("xxhash", SetLastError = false)]
     [SuppressGCTransition]
-    public extern static ushort XXH_versionNumber();
+    public static partial ushort XXH_versionNumber();
 
-    [DllImport("xxhash", SetLastError = false)]
+    [LibraryImport("xxhash", SetLastError = false)]
     [SuppressGCTransition]
-    public extern static uint XXH32(ref byte input, UIntPtr length, uint seed);
+    public static partial uint XXH32(ref byte input, nuint length, uint seed);
 
-    [DllImport("xxhash", SetLastError = false)]
+    [LibraryImport("xxhash", SetLastError = false)]
     [SuppressGCTransition]
-    public extern static ulong XXH64(ref byte input, UIntPtr length, ulong seed);
+    public static partial ulong XXH64(ref byte input, nuint length, ulong seed);
 
-    [DllImport("xxhash", SetLastError = false)]
+    [LibraryImport("xxhash", SetLastError = false)]
     [SuppressGCTransition]
-    public extern static ulong XXH3_64bits(ref byte data, UIntPtr length);
+    public static partial ulong XXH3_64bits(ref byte data, nuint length);
 
-    [DllImport("xxhash", SetLastError = false)]
+    [LibraryImport("xxhash", SetLastError = false)]
     [SuppressGCTransition]
-    public extern static ulong XXH3_64bits_withSeed(ref byte data, UIntPtr length, ulong seed);
+    public static partial ulong XXH3_64bits_withSeed(ref byte data, nuint length, ulong seed);
 
-    [DllImport("xxhash", SetLastError = false)]
+    [LibraryImport("xxhash", SetLastError = false)]
     [SuppressGCTransition]
-    public extern static ulong XXH3_64bits_withSecret(ref byte input, UIntPtr length, ref byte secret, UIntPtr secretSize);
+    public static partial ulong XXH3_64bits_withSecret(ref byte input, nuint length, ref byte secret, nuint secretSize);
 
-    [DllImport("xxhash", SetLastError = false)]
+    [LibraryImport("xxhash", SetLastError = false)]
     [SuppressGCTransition]
-    public extern static XXH128_hash_t XXH3_128bits(ref byte input, UIntPtr length);
+    public static partial XXH128_hash_t XXH3_128bits(ref byte input, nuint length);
 
-    [DllImport("xxhash", SetLastError = false)]
+    [LibraryImport("xxhash", SetLastError = false)]
     [SuppressGCTransition]
-    public extern static XXH128_hash_t XXH3_128bits_withSeed(ref byte input, UIntPtr length, ulong seed);
+    public static partial XXH128_hash_t XXH3_128bits_withSeed(ref byte input, nuint length, ulong seed);
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -38,7 +39,8 @@ namespace XXHash.Managed;
 ////    /* note: there may be some padding at the end due to alignment on 64 bytes */
 ////};
 
-public class XXH3State {
+public sealed class XXH3State 
+{
     internal ulong[] Accumulator;
     internal ulong[] CustomSecret;
     internal byte[] Buffer;
@@ -78,6 +80,9 @@ public class XXH3State {
     ////    statePtr->secretLimit = secretSize - XXH_STRIPE_LEN;
     ////    statePtr->nbStripesPerBlock = statePtr->secretLimit / XXH_SECRET_CONSUME_RATE;
     ////}
+    [MemberNotNull(nameof(Accumulator))]
+    [MemberNotNull(nameof(CustomSecret))]
+    [MemberNotNull(nameof(Buffer))]
     public void Reset(ulong seed = 0)
     {
         this.NumberOfStripesProcessed = 0;
@@ -87,7 +92,7 @@ public class XXH3State {
 
         if (this.Buffer != null)
         {
-            this.Buffer.AsSpan().Fill(0);
+            this.Buffer.AsSpan().Clear();
         }
         else
         {
@@ -229,7 +234,7 @@ public class XXH3State {
         }
     }
 
-    public async ValueTask AppendAsync(Stream stream, CancellationToken cancellationToken = default, int blockSize = 1 << 16)
+    public async ValueTask AppendAsync(Stream stream, int blockSize = 1 << 16, CancellationToken cancellationToken = default)
     {
         var block = ArrayPool<byte>.Shared.Rent(blockSize);
 

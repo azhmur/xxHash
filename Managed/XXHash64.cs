@@ -49,13 +49,13 @@ public static class XXHash64
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong XXH64(ReadOnlySpan<char> input, ulong seed)
     {
-        return XXH64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(input)), (UIntPtr)(input.Length * 2), seed);
+        return XXH64(ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(input)), (nuint)(input.Length * 2), seed);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong XXH64(ReadOnlySpan<byte> input, ulong seed)
     {
-        return XXH64(ref MemoryMarshal.GetReference(input), (UIntPtr)input.Length, seed);
+        return XXH64(ref MemoryMarshal.GetReference(input), (nuint)input.Length, seed);
     }
 
     ////XXH_PUBLIC_API XXH64_hash_t XXH64 (const void* input, size_t len, XXH64_hash_t seed)
@@ -78,7 +78,7 @@ public static class XXHash64
     ////}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong XXH64(ref byte input, UIntPtr len, ulong seed)
+    private static ulong XXH64(ref byte input, nuint len, ulong seed)
     {
         return XXH64_endian_align(ref input, len, seed);
     }

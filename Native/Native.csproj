@@ -14,6 +14,7 @@
     <PackageTags>xxHash, xxHash3, xxHash64, xxHash32, xxHash3_128</PackageTags>
     <EmbedAllSources>true</EmbedAllSources>
     <DebugType>Embedded</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Content CopyToOutputDirectory="PreserveNewest" Include="xxhash.dll" Link="xxhash.dll" Pack="true" PackagePath="runtimes/windows-x64/native/xxhash.dll" />

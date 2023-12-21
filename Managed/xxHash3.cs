@@ -1819,7 +1819,7 @@ public unsafe static class XXHash3
             input = ref Unsafe.AddByteOffset(ref input, (nint)(nbStripes * XXHashShared.XXH_STRIPE_LEN));
             state.NumberOfStripesProcessed = (ulong)nbStripes;
 
-            MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AddByteOffset(ref input, -((nint)XXHashShared.XXH_STRIPE_LEN)), (int)XXHashShared.XXH_STRIPE_LEN).CopyTo(state.Buffer.AsSpan(..^(int)XXHashShared.XXH_STRIPE_LEN));
+            MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AddByteOffset(ref input, -((nint)XXHashShared.XXH_STRIPE_LEN)), (int)XXHashShared.XXH_STRIPE_LEN).CopyTo(state.Buffer.AsSpan(^(int)XXHashShared.XXH_STRIPE_LEN));
         }
         else
         {
