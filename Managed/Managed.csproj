@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <PackageId>XXHash.Managed</PackageId>
-    <Version>1.4.1</Version>
+    <Version>1.5.0</Version>
     <Authors>Anatoly Zhmur</Authors>
     <Product />
     <Description>Managed implementation of xxHash3 and xxHash64 algorithms with support of intrinsics (SSE2/AVX2, ARM). Avx2 optimized Bloom Filter implementation.</Description>

@@ -4,5 +4,4 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using XXHash.Benchmarks;
 
-BenchmarkRunner.Run<StreamingTests>(DefaultConfig.Instance.AddJob(Job.MediumRun
-    .WithEnvironmentVariable("DOTNET_TieredPGO", "0")).WithSummaryStyle(BenchmarkDotNet.Reports.SummaryStyle.Default.WithRatioStyle(RatioStyle.Value)));
+BenchmarkRunner.Run<PseudoRandomTest>(DefaultConfig.Instance.AddJob(Job.MediumRun).WithSummaryStyle(BenchmarkDotNet.Reports.SummaryStyle.Default.WithRatioStyle(RatioStyle.Value)));

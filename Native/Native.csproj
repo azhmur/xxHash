@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>XXHash.Native</PackageId>
-    <Version>8.1.2.1</Version>
+    <Version>8.1.2.2</Version>
     <RepositoryUrl>https://github.com/azhmur/xxHash</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RootNamespace>XXHash.Native</RootNamespace>
@@ -14,6 +14,7 @@
     <PackageTags>xxHash, xxHash3, xxHash64, xxHash32, xxHash3_128</PackageTags>
     <EmbedAllSources>true</EmbedAllSources>
     <DebugType>Embedded</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Content CopyToOutputDirectory="PreserveNewest" Include="xxhash.dll" Link="xxhash.dll" Pack="true" PackagePath="runtimes/windows-x64/native/xxhash.dll" />
