@@ -4,4 +4,4 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using XXHash.Benchmarks;
 
-BenchmarkRunner.Run<PseudoRandomTest>(DefaultConfig.Instance.AddJob(Job.MediumRun).WithSummaryStyle(BenchmarkDotNet.Reports.SummaryStyle.Default.WithRatioStyle(RatioStyle.Value)));
+BenchmarkRunner.Run<ByteBlockTests>(DefaultConfig.Instance.AddJob(Job.MediumRun.WithLaunchCount(1)).WithSummaryStyle(BenchmarkDotNet.Reports.SummaryStyle.Default.WithRatioStyle(RatioStyle.Value)));

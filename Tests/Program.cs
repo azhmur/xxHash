@@ -44,9 +44,9 @@ internal class Program
             var golden3_64 = XXHash.Native.XXHashNative.XXHash3_64(data, seed);
             var golden3_128 = XXHash.Native.XXHashNative.XXHash3_128(data, seed);
 
-            var managed64 = XXHash.Managed.XXHash64.XXH64(data, seed);
-            var managed3_64 = XXHash.Managed.XXHash3.XXH3_64(data, seed);
-            var managed3_128 = XXHash.Managed.XXHash3.XXH3_128(data, seed);
+            var managed64 = System.IO.Hashing.XxHash64.HashToUInt64(data, (long)seed);
+            var managed3_64 = System.IO.Hashing.XxHash3.HashToUInt64(data, (long)seed);
+            var managed3_128 = System.IO.Hashing.XxHash128.HashToUInt128(data, (long)seed);
 
             if (golden3_64 != managed3_64)
             {
@@ -61,7 +61,7 @@ internal class Program
             }
 
 
-            if (golden3_128.low64 != managed3_128.Low || golden3_128.high64 != managed3_128.High)
+            if (managed3_128 != golden3_128.ToUInt128())
             {
                 Console.WriteLine($"xx3_128 verification failed at length {i}");
                 return;

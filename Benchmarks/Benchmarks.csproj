@@ -10,11 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-    <PackageReference Include="BloomFilter.NetCore" Version="2.4.1" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.4" />
+    <PackageReference Include="BloomFilter.NetCore" Version="2.5.3" />
     <PackageReference Include="K4os.Hash.xxHash" Version="1.0.8" />
     <PackageReference Include="Standart.Hash.xxHash" Version="4.0.5" />
-    <PackageReference Include="System.IO.Hashing" Version="9.0.3" />
+    <PackageReference Include="System.IO.Hashing" Version="9.0.9" />
     <PackageReference Include="WyHash" Version="1.0.5" />
     <PackageReference Include="XXHash3.NET" Version="2.1.0" />
   </ItemGroup>
