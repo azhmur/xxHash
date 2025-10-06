@@ -11,9 +11,10 @@ using XXHash.Native;
 
 namespace XXHash.Benchmarks;
 
-public class PseudoRandomTest
+public class SmallPseudoRandomTest
 {
     private const int itemsCount = 1000;
+    private const int maxSize = 1 << 20;
     
     
     private ulong seed;
@@ -28,12 +29,12 @@ public class PseudoRandomTest
 
         for (int i = 0; i < itemsCount; i++) 
         {
-            data[i] = new byte[rand.Next(32) + 1];
+            data[i] = new byte[rand.Next(maxSize)];
             rand.NextBytes(data[i]);
         }
     }
 
-    [Benchmark(OperationsPerInvoke = itemsCount)]
+    [Benchmark(OperationsPerInvoke = itemsCount, Baseline = true)]
     public ulong Managed3_64()
     {
         ulong hash = 0;
@@ -60,7 +61,7 @@ public class PseudoRandomTest
     }
 
     [Benchmark(OperationsPerInvoke = itemsCount)]
-    public ulong Native_64()
+    public ulong Native3_64()
     {
         ulong hash = 0;
 
@@ -72,8 +73,8 @@ public class PseudoRandomTest
         return hash;
     }
 
-    [Benchmark(OperationsPerInvoke = itemsCount)]
-    public ulong Standart_64()
+    //[Benchmark(OperationsPerInvoke = itemsCount)]
+    public ulong Standart3_64()
     {
         ulong hash = 0;
 
@@ -85,7 +86,7 @@ public class PseudoRandomTest
         return hash;
     }
 
-    [Benchmark(OperationsPerInvoke = itemsCount)]
+    //[Benchmark(OperationsPerInvoke = itemsCount)]
     public UInt128 Managed3_128()
     {
         UInt128 hash = 0;
@@ -99,7 +100,7 @@ public class PseudoRandomTest
         return hash;
     }
 
-    [Benchmark(OperationsPerInvoke = itemsCount)]
+    //[Benchmark(OperationsPerInvoke = itemsCount)]
     public UInt128 System3_128()
     {
         UInt128 hash = 0;
@@ -113,7 +114,7 @@ public class PseudoRandomTest
         return hash;
     }
 
-    [Benchmark(OperationsPerInvoke = itemsCount)]
+    //[Benchmark(OperationsPerInvoke = itemsCount)]
     public UInt128 Native3_128()
     {
         UInt128 hash = 0;
@@ -127,8 +128,8 @@ public class PseudoRandomTest
         return hash;
     }
 
-    [Benchmark(OperationsPerInvoke = itemsCount)]
-    public UInt128 Standard3_128()
+    //[Benchmark(OperationsPerInvoke = itemsCount)]
+    public UInt128 Standart3_128()
     {
         UInt128 hash = 0;
 

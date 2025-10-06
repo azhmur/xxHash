@@ -44,9 +44,9 @@ internal class Program
             var golden3_64 = XXHash.Native.XXHashNative.XXHash3_64(data, seed);
             var golden3_128 = XXHash.Native.XXHashNative.XXHash3_128(data, seed);
 
-            var managed64 = System.IO.Hashing.XxHash64.HashToUInt64(data, (long)seed);
-            var managed3_64 = System.IO.Hashing.XxHash3.HashToUInt64(data, (long)seed);
-            var managed3_128 = System.IO.Hashing.XxHash128.HashToUInt128(data, (long)seed);
+            var managed64 = XXHash64.XXH64(data, seed);
+            var managed3_64 = XXHash3.XXH3_64(data, seed);
+            var managed3_128 = XXHash3.XXH3_128(data, seed);
 
             if (golden3_64 != managed3_64)
             {

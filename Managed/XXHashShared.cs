@@ -23,7 +23,7 @@ public static unsafe class XXHashShared
     public const uint XXH_SECRET_LASTACC_START = 7;
     public const uint SecretLimit = XXH_SECRET_DEFAULT_SIZE - XXH_STRIPE_LEN;
 
-    public static ReadOnlySpan<byte> XXH3_kSecret => new byte[] {
+    public static ReadOnlySpan<byte> XXH3_kSecret => [
         0xb8, 0xfe, 0x6c, 0x39, 0x23, 0xa4, 0x4b, 0xbe, 0x7c, 0x01, 0x81, 0x2c, 0xf7, 0x21, 0xad, 0x1c,
         0xde, 0xd4, 0x6d, 0xe9, 0x83, 0x90, 0x97, 0xdb, 0x72, 0x40, 0xa4, 0xa4, 0xb7, 0xb3, 0x67, 0x1f,
         0xcb, 0x79, 0xe6, 0x4e, 0xcc, 0xc0, 0xe5, 0x78, 0x82, 0x5a, 0xd0, 0x7d, 0xcc, 0xff, 0x72, 0x21,
@@ -36,9 +36,9 @@ public static unsafe class XXHashShared
         0x17, 0x0d, 0xdd, 0x51, 0xb7, 0xf0, 0xda, 0x49, 0xd3, 0x16, 0x55, 0x26, 0x29, 0xd4, 0x68, 0x9e,
         0x2b, 0x16, 0xbe, 0x58, 0x7d, 0x47, 0xa1, 0xfc, 0x8f, 0xf8, 0xb8, 0xd1, 0x7a, 0xd0, 0x31, 0xce,
         0x45, 0xcb, 0x3a, 0x8f, 0x95, 0x16, 0x04, 0x28, 0xaf, 0xd7, 0xfb, 0xca, 0xbb, 0x4b, 0x40, 0x7e,
-    };
+    ];
 
-    public static ReadOnlySpan<ulong> XXH3_INIT_ACC => new ulong[] { XXH_PRIME32_3, XXH_PRIME64_1, XXH_PRIME64_2, XXH_PRIME64_3, XXH_PRIME64_4, XXH_PRIME32_2, XXH_PRIME64_5, XXH_PRIME32_1 };
+    public static ReadOnlySpan<ulong> XXH3_INIT_ACC => [XXH_PRIME32_3, XXH_PRIME64_1, XXH_PRIME64_2, XXH_PRIME64_3, XXH_PRIME64_4, XXH_PRIME32_2, XXH_PRIME64_5, XXH_PRIME32_1];
 
     public const ulong XXH_PRIME64_1 = 0x9E3779B185EBCA87; /*!< 0b1001111000110111011110011011000110000101111010111100101010000111 */
     public const ulong XXH_PRIME64_2 = 0xC2B2AE3D27D4EB4F; /*!< 0b1100001010110010101011100011110100100111110101001110101101001111 */
@@ -51,9 +51,6 @@ public static unsafe class XXHashShared
     public const ulong XXH_PRIME32_3 = 0xC2B2AE3D;  /*!< 0b11000010101100101010111000111101 */
     public const ulong XXH_PRIME32_4 = 0x27D4EB2F;  /*!< 0b00100111110101001110101100101111 */
     public const ulong XXH_PRIME32_5 = 0x165667B1;  /*!< 0b00010110010101100110011110110001 */
-
-    public static readonly Vector128<uint> Prime32_128 = Vector128.Create((uint)XXH_PRIME32_1);
-    public static readonly Vector256<uint> Prime32_256 = Vector256.Create((uint)XXH_PRIME32_1);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static uint GetSecret32(uint index)
