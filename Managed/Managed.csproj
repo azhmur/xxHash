@@ -1,12 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <PackageId>XXHash.Managed</PackageId>
-    <Version>1.5.1</Version>
+    <Version>1.5.2</Version>
     <Authors>Anatoly Zhmur</Authors>
     <Product />
     <Description>Managed implementation of xxHash3 and xxHash64 algorithms with support of intrinsics (SSE2/AVX2, ARM). Avx2 optimized Bloom Filter implementation.</Description>
@@ -16,8 +13,5 @@
     <AssemblyName>XXHash.Managed</AssemblyName>
     <RootNamespace>XXHash.Managed</RootNamespace>
     <PackageTags>xxHash, xxHash3, xxHash3_64, xxHash64, xxHash3_128, BloomFilter</PackageTags>
-    <EmbedAllSources>true</EmbedAllSources>
-    <DebugType>Embedded</DebugType>
   </PropertyGroup>
-
 </Project>

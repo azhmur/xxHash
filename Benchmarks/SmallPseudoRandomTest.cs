@@ -13,8 +13,8 @@ namespace XXHash.Benchmarks;
 
 public class SmallPseudoRandomTest
 {
-    private const int itemsCount = 1000;
-    private const int maxSize = 1 << 20;
+    private const int itemsCount = 100000;
+    private const int maxSize = 1 << 5;
     
     
     private ulong seed;

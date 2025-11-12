@@ -17,7 +17,7 @@ public class ByteBlockTests
 {
     private ulong seed;
 
-    [Params(/*1,7,15,*/ 1 << 30)]
+    [Params(1,7,15)]
     public int length;
 
     public byte[] buffer;

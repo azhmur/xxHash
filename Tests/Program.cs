@@ -9,7 +9,7 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        Validate();
+        BloomFilterTest2();
     }
 
     static void RandomTest()
@@ -75,8 +75,8 @@ internal class Program
     {
         //const int millibitsPerKey = 7000;
         //const int sizeInBytes = 11700;
-        const int elementCount = 10000;
-        const double fpRate = 0.001;
+        const int elementCount = 100000;
+        const double fpRate = 0.00001;
 
         IBloomFilter bloomFilter = FilterBuilder.Build(elementCount, fpRate);
 
