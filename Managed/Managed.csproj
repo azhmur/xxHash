@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <PackageId>XXHash.Managed</PackageId>
@@ -12,6 +11,14 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <AssemblyName>XXHash.Managed</AssemblyName>
     <RootNamespace>XXHash.Managed</RootNamespace>
-    <PackageTags>xxHash, xxHash3, xxHash3_64, xxHash64, xxHash3_128, BloomFilter</PackageTags>
+    <PackageTags>xxHash, xxHash3, BloomFilter</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 </Project>
