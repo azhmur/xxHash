@@ -27,7 +27,7 @@ jobs:
             target: libxxhash.so
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -42,7 +42,7 @@ jobs:
           # On Linux libxxhash.so is a symlink chain; -L copies the real file.
           cp -L "${{ matrix.built }}" "Native/${{ matrix.target }}"
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             8.0.x
@@ -53,7 +53,7 @@ jobs:
       - name: Test managed vs native
         run: dotnet test UnitTests -c Release
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: Native/${{ matrix.target }}
@@ -66,20 +66,23 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: Native
           merge-multiple: true
 
       - name: Read xxHash version
         id: version
-        run: echo "tag=$(git -C external/xxHash describe --tags --always)" >> "$GITHUB_OUTPUT"
+        run: |
+          # checkout fetches the submodule without tags
+          git -C external/xxHash fetch --depth=1 origin "+refs/tags/*:refs/tags/*"
+          echo "tag=$(git -C external/xxHash describe --tags --always)" >> "$GITHUB_OUTPUT"
 
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         with:
           branch: update-native-binaries
           add-paths: |
