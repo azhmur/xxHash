@@ -95,8 +95,8 @@ public static unsafe class XXHashShared
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong XXH3_mul128_fold64(ulong lhs, ulong rhs)
     {
-        var hash128 = XXH3_mul128(lhs, rhs);
-        return hash128.Low ^ hash128.High;
+        ulong high = Math.BigMul(lhs, rhs, out ulong low);
+        return low ^ high;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

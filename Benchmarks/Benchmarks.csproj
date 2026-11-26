@@ -2,19 +2,19 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <RootNamespace>XXHash.Benchmarks</RootNamespace>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <TargetFrameworks>net11.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.15.4" />
-    <PackageReference Include="BloomFilter.NetCore" Version="2.5.3" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.16.0-preview.1" />
+    <PackageReference Include="BloomFilter.NetCore" Version="3.0.1" />
     <PackageReference Include="K4os.Hash.xxHash" Version="1.0.8" />
     <PackageReference Include="Standart.Hash.xxHash" Version="4.0.5" />
-    <PackageReference Include="System.IO.Hashing" Version="9.0.9" />
+    <PackageReference Include="System.IO.Hashing" Version="11.0.0-rc.2.26426.126" />
     <PackageReference Include="WyHash" Version="1.0.5" />
     <PackageReference Include="XXHash3.NET" Version="2.1.0" />
   </ItemGroup>
