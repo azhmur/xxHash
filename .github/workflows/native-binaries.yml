@@ -40,6 +40,14 @@ jobs:
           # dispatch functions dllexport; export them explicitly via the linker.
           # (GCC exports them anyway thanks to default symbol visibility.)
           LINKER_FLAGS=""
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            # Pin the baseline ISA. Dispatch only works if everything outside the
+            # *_avx2 / *_avx512 variants is plain SSE2; a toolchain whose default -march
+            # enables AVX would make the "SSE2" path and the dispatcher itself crash on
+            # older CPUs. The previous build had exactly that problem.
+            export CFLAGS="-march=x86-64 -mtune=generic"   # CMake seeds CMAKE_C_FLAGS from this
+            gcc -Q --help=target | grep -E '^\s+-march=|^\s+-mavx2 ' || true
+          fi
           if [ "$RUNNER_OS" = "Windows" ]; then
             for f in XXH_featureTest \
                      XXH3_64bits_dispatch XXH3_64bits_withSeed_dispatch XXH3_64bits_withSecret_dispatch XXH3_64bits_update_dispatch \
@@ -56,6 +64,21 @@ jobs:
           cmake --build build --config Release
           # On Linux libxxhash.so is a symlink chain; -L copies the real file.
           cp -L "${{ matrix.built }}" "Native/${{ matrix.target }}"
+
+      - name: Verify ISA usage (no AVX outside *_avx2 / *_avx512 functions)
+        if: runner.os == 'Linux'
+        run: |
+          objdump -d --no-show-raw-insn Native/libxxhash.so | awk '
+            /^[0-9a-f]+ <.*>:$/ { fn = $2; next }
+            fn !~ /avx2|avx512/ && $0 ~ /\t(v[a-z0-9]+)[ \t]/ { bad[fn]++ }
+            fn ~ /avx2/   && $0 ~ /%ymm/ { avx2++ }
+            fn ~ /avx512/ && $0 ~ /%zmm/ { avx512++ }
+            END {
+              for (f in bad) { print "AVX instruction in non-AVX function " f ": " bad[f]; fail = 1 }
+              printf "AVX2 ymm instructions: %d, AVX-512 zmm instructions: %d\n", avx2, avx512
+              if (!avx2 || !avx512) { print "missing AVX2/AVX-512 variants"; fail = 1 }
+              exit fail
+            }'
 
       - uses: actions/setup-dotnet@v6
         with:
