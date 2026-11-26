@@ -486,7 +486,7 @@ public unsafe static class XXHash3
         else
         {
             Span<ulong> customSecret = stackalloc ulong[(int)XXHashShared.XXH_SECRET_DEFAULT_SIZE / sizeof(ulong)];
-            XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
+            XXH3_initCustomSecret(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
             return XXH3_hashLong_64b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret));
         }
     }
@@ -704,10 +704,17 @@ public unsafe static class XXHash3
         const uint block_len = XXHashShared.XXH_STRIPE_LEN * nbStripesPerBlock;
         uint nb_blocks = (len - 1) / block_len;
 
+        uint nbStripes = ((len - 1) - (block_len * nb_blocks)) / XXHashShared.XXH_STRIPE_LEN;
+
+        /* last stripe */
+        ref byte p = ref Unsafe.AddByteOffset(ref input, len - XXHashShared.XXH_STRIPE_LEN);
+        ref ulong lastSecret = ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN - XXHashShared.XXH_SECRET_LASTACC_START);
+
         if (Avx2.IsSupported)
         {
-            var acc1 = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref acc));
-            var acc2 = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref acc, 32)));
+            // Accumulators stay in registers for the whole input, including the tail and the last stripe.
+            var acc1 = Vector256.LoadUnsafe(ref acc);
+            var acc2 = Vector256.LoadUnsafe(ref acc, 4);
 
             for (var n = 0; n < nb_blocks; n++)
             {
@@ -715,8 +722,11 @@ public unsafe static class XXHash3
                 XXH3_scrambleAcc_avx2_preloadedAcc(ref acc1, ref acc2, ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN));
             }
 
-            Avx2.Store((ulong*)Unsafe.AsPointer(ref acc), acc1);
-            Avx2.Store((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref acc, 32)), acc2);
+            XXH3_accumulate_avx2_PreloadedAcc(ref acc1, ref acc2, ref Unsafe.AddByteOffset(ref input, nb_blocks * block_len), ref secret, nbStripes);
+            XXH3_accumulate_512_avx2_preloadedAcc(ref acc1, ref acc2, ref p, ref lastSecret);
+
+            acc1.StoreUnsafe(ref acc);
+            acc2.StoreUnsafe(ref acc, 4);
         }
         else
         {
@@ -725,14 +735,10 @@ public unsafe static class XXHash3
                 XXH3_accumulate(ref acc, ref Unsafe.AddByteOffset(ref input, (nuint)n * block_len), ref secret, nbStripesPerBlock);
                 XXH3_scrambleAcc(ref acc, ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN));
             }
+
+            XXH3_accumulate(ref acc, ref Unsafe.AddByteOffset(ref input, nb_blocks * block_len), ref secret, nbStripes);
+            XXH3_accumulate_512(ref acc, ref p, ref lastSecret);
         }
-
-        uint nbStripes = ((len - 1) - (block_len * nb_blocks)) / XXHashShared.XXH_STRIPE_LEN;
-        XXH3_accumulate(ref acc, ref Unsafe.AddByteOffset(ref input, nb_blocks * block_len), ref secret, nbStripes);
-
-        /* last stripe */
-        ref byte p = ref Unsafe.AddByteOffset(ref input, len - XXHashShared.XXH_STRIPE_LEN);
-        XXH3_accumulate_512(ref acc, ref p, ref Unsafe.AddByteOffset(ref secret, XXHashShared.XXH_SECRET_DEFAULT_SIZE - XXHashShared.XXH_STRIPE_LEN - XXHashShared.XXH_SECRET_LASTACC_START));
     }
 
     ////static XXH64_hash_t
@@ -854,6 +860,31 @@ public unsafe static class XXHash3
     }
 
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void XXH3_initCustomSecret(ref ulong basicSecret, ref ulong customSecret, ulong seed64)
+    {
+        if (Avx2.IsSupported)
+        {
+            XXH3_initCustomSecret_avx2(ref basicSecret, ref customSecret, seed64);
+        }
+        else
+        {
+            XXH3_initCustomSecret_scalar(ref basicSecret, ref customSecret, seed64);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private static void XXH3_initCustomSecret_avx2(ref ulong basicSecret, ref ulong customSecret, ulong seed64)
+    {
+        var seed = Vector256.Create(seed64, 0UL - seed64, seed64, 0UL - seed64);
+
+        for (nuint i = 0; i < XXHashShared.XXH_SECRET_DEFAULT_SIZE / sizeof(ulong); i += (nuint)Vector256<ulong>.Count)
+        {
+            (Vector256.LoadUnsafe(ref basicSecret, i) + seed).StoreUnsafe(ref customSecret, i);
+        }
+    }
+
+
     ////XXH_FORCE_INLINE XXH_TARGET_SSE2 void
     ////XXH3_accumulate_512_sse2( void* XXH_RESTRICT acc,
     ////                    const void* XXH_RESTRICT input,
@@ -909,17 +940,17 @@ public unsafe static class XXHash3
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         static void Round(ref ulong acc, ref byte input, ref ulong secret, uint i)
         {
-            var dataVec = Sse2.LoadVector128((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref input, i * blockSize)));
-            var keyVec = Sse2.LoadVector128((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
+            var dataVec = Vector128.LoadUnsafe(ref Unsafe.AddByteOffset(ref input, i * blockSize)).AsUInt64();
+            var keyVec = Vector128.LoadUnsafe(ref Unsafe.AddByteOffset(ref secret, i * blockSize));
             var dataKey = Sse2.Xor(dataVec, keyVec).AsUInt32();
             var dataKeyLo = Sse2.Shuffle(dataKey, shuffle1);
             var product = Sse2.Multiply(dataKey, dataKeyLo);
             var data_swap = Sse2.Shuffle(dataVec.AsUInt32(), shuffle2).AsUInt64();
-            var accLine = (ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref acc, i * blockSize));
-            var xacc = Sse2.LoadVector128(accLine);
+            ref ulong accLine = ref Unsafe.AddByteOffset(ref acc, i * blockSize);
+            var xacc = Vector128.LoadUnsafe(ref accLine);
             var sum = Sse2.Add(xacc, data_swap);
             var sum2 = Sse2.Add(product, sum);
-            Sse2.Store(accLine, sum2);
+            sum2.StoreUnsafe(ref accLine);
         }
     }
 
@@ -983,16 +1014,16 @@ public unsafe static class XXHash3
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         static void Round(ref ulong acc, ref ulong secret, uint i)
         {
-            var accLine = (ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref acc, i * blockSize));
-            var accVec = Sse2.LoadVector128(accLine);
+            ref ulong accLine = ref Unsafe.AddByteOffset(ref acc, i * blockSize);
+            var accVec = Vector128.LoadUnsafe(ref accLine);
             var shifted = Sse2.ShiftRightLogical(accVec, 47);
             var dataVec = Sse2.Xor(accVec, shifted);
-            var keyVec = Sse2.LoadVector128((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
+            var keyVec = Vector128.LoadUnsafe(ref Unsafe.AddByteOffset(ref secret, i * blockSize));
             var dataKey = Sse2.Xor(dataVec, keyVec).AsUInt32();
             var dataKeyHi = Sse2.Shuffle(dataKey, shuffle1);
             var prodLo = Sse2.Multiply(dataKey, Vector128.Create((uint)XXHashShared.XXH_PRIME32_1));
             var prodHi = Sse2.Multiply(dataKeyHi, Vector128.Create((uint)XXHashShared.XXH_PRIME32_1));
-            Sse2.Store(accLine, Sse2.Add(prodLo.AsUInt64(), Sse2.ShiftLeftLogical(prodHi, 32)));
+            Sse2.Add(prodLo.AsUInt64(), Sse2.ShiftLeftLogical(prodHi, 32)).StoreUnsafe(ref accLine);
         }
     }
 
@@ -1043,17 +1074,17 @@ public unsafe static class XXHash3
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         static void Round(ref ulong acc, ref byte input, ref ulong secret, uint i)
         {
-            var dataVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref input, i * blockSize)));
-            var keyVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
+            var dataVec = Vector256.LoadUnsafe(ref Unsafe.AddByteOffset(ref input, i * blockSize)).AsUInt64();
+            var keyVec = Vector256.LoadUnsafe(ref Unsafe.AddByteOffset(ref secret, i * blockSize));
             var dataKey = Avx2.Xor(dataVec, keyVec).AsUInt32();
             var dataKeyLo = Avx2.Shuffle(dataKey, shuffle1);
             var product = Avx2.Multiply(dataKey, dataKeyLo);
             var data_swap = Avx2.Shuffle(dataVec.AsUInt32(), shuffle2).AsUInt64();
-            var accLine = (ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref acc, i * blockSize));
-            var xacc = Avx2.LoadVector256(accLine);
+            ref ulong accLine = ref Unsafe.AddByteOffset(ref acc, i * blockSize);
+            var xacc = Vector256.LoadUnsafe(ref accLine);
             var sum = Avx2.Add(xacc, data_swap);
             var sum2 = Avx2.Add(product, sum);
-            Avx2.Store(accLine, sum2);
+            sum2.StoreUnsafe(ref accLine);
         }
     }
 
@@ -1070,8 +1101,8 @@ public unsafe static class XXHash3
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         static void Round(ref Vector256<ulong> acc, ref byte input, ref ulong secret, uint i)
         {
-            var dataVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref input, i * blockSize)));
-            var keyVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
+            var dataVec = Vector256.LoadUnsafe(ref Unsafe.AddByteOffset(ref input, i * blockSize)).AsUInt64();
+            var keyVec = Vector256.LoadUnsafe(ref Unsafe.AddByteOffset(ref secret, i * blockSize));
             var dataKey = Avx2.Xor(dataVec, keyVec).AsUInt32();
             var dataKeyLo = Avx2.Shuffle(dataKey, shuffle1);
             var product = Avx2.Multiply(dataKey, dataKeyLo);
@@ -1122,16 +1153,16 @@ public unsafe static class XXHash3
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         static void Round(ref ulong acc, ref ulong secret, uint i)
         {
-            var accLine = (ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref acc, i * blockSize));
-            var accVec = Avx2.LoadVector256(accLine);
+            ref ulong accLine = ref Unsafe.AddByteOffset(ref acc, i * blockSize);
+            var accVec = Vector256.LoadUnsafe(ref accLine);
             var shifted = Avx2.ShiftRightLogical(accVec, 47);
             var dataVec = Avx2.Xor(accVec, shifted);
-            var keyVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
+            var keyVec = Vector256.LoadUnsafe(ref Unsafe.AddByteOffset(ref secret, i * blockSize));
             var dataKey = Avx2.Xor(dataVec, keyVec).AsUInt32();
             var dataKeyHi = Avx2.Shuffle(dataKey, shuffle1);
             var prodLo = Avx2.Multiply(dataKey, Vector256.Create((uint)XXHashShared.XXH_PRIME32_1));
             var prodHi = Avx2.Multiply(dataKeyHi, Vector256.Create((uint)XXHashShared.XXH_PRIME32_1));
-            Avx2.Store(accLine, Avx2.Add(prodLo.AsUInt64(), Avx2.ShiftLeftLogical(prodHi, 32)));
+            Avx2.Add(prodLo.AsUInt64(), Avx2.ShiftLeftLogical(prodHi, 32)).StoreUnsafe(ref accLine);
         }
     }
 
@@ -1149,7 +1180,7 @@ public unsafe static class XXHash3
         {
             var shifted = Avx2.ShiftRightLogical(acc, 47);
             var dataVec = Avx2.Xor(acc, shifted);
-            var keyVec = Avx2.LoadVector256((ulong*)Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref secret, i * blockSize)));
+            var keyVec = Vector256.LoadUnsafe(ref Unsafe.AddByteOffset(ref secret, i * blockSize));
             var dataKey = Avx2.Xor(dataVec, keyVec).AsUInt32();
             var dataKeyHi = Avx2.Shuffle(dataKey, shuffle1);
             var prodLo = Avx2.Multiply(dataKey, Vector256.Create((uint)XXHashShared.XXH_PRIME32_1));
@@ -1652,7 +1683,7 @@ public unsafe static class XXHash3
         else
         {
             Span<ulong> customSecret = stackalloc ulong[(int)XXHashShared.XXH_SECRET_DEFAULT_SIZE / sizeof(ulong)];
-            XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
+            XXH3_initCustomSecret(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference(customSecret), seed64);
             return XXH3_hashLong_128b_internal(ref input, len, ref MemoryMarshal.GetReference(customSecret));
         }
     }

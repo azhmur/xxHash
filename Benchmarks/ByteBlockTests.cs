@@ -41,7 +41,7 @@ public class ByteBlockTests
         return Standart.Hash.xxHash.xxHash64.ComputeHash(buffer, buffer.Length, seed);
     }
 
-    [Benchmark]
+    //[Benchmark]
     public ulong StandartXXHash3()
     {
         return Standart.Hash.xxHash.xxHash3.ComputeHash(buffer, buffer.Length, seed);

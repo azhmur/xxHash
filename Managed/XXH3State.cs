@@ -111,7 +111,7 @@ public sealed class XXH3State
             this.CustomSecret = new ulong[(int)XXHashShared.XXH_SECRET_DEFAULT_SIZE / sizeof(ulong)];
         }
 
-        XXHash3.XXH3_initCustomSecret_scalar(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference<ulong>(this.CustomSecret), seed);
+        XXHash3.XXH3_initCustomSecret(ref Unsafe.As<byte, ulong>(ref MemoryMarshal.GetReference(XXHashShared.XXH3_kSecret)), ref MemoryMarshal.GetReference<ulong>(this.CustomSecret), seed);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
