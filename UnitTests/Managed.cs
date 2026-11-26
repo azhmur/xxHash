@@ -11,6 +11,17 @@ using XXHash.Native;
 public class ManagedvsNative
 {
     [Fact]
+    public void NativeDispatchMatchesCpu()
+    {
+        int expected =
+            System.Runtime.Intrinsics.X86.Avx512F.IsSupported ? 3 :
+            System.Runtime.Intrinsics.X86.Avx2.IsSupported ? 2 :
+            System.Runtime.Intrinsics.X86.Sse2.IsSupported ? 1 : 0;
+
+        Assert.Equal(expected, XXHashNative.VectorImplementation);
+    }
+
+    [Fact]
     public void RandomDataOneBlock()
     {
         var rand = new Random(1343);

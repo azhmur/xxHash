@@ -5,6 +5,12 @@ namespace XXHash.Native;
 
 public static class XXHashNative
 {
+    /// <summary>
+    /// Vector implementation the native XXH3 functions selected at runtime:
+    /// 0 = scalar, 1 = SSE2, 2 = AVX2, 3 = AVX-512.
+    /// </summary>
+    public static int VectorImplementation => Native.XXH_featureTest();
+
     public static ulong XXHash3_64(ReadOnlySpan<byte> data)
     {
         return Native.XXH3_64bits(ref MemoryMarshal.GetReference(data), (nuint)data.Length);

@@ -34,10 +34,25 @@ jobs:
       - name: Build xxHash shared library
         shell: bash
         run: |
+          # DISPATCH adds xxh_x86dispatch.c: the XXH3_*_dispatch exports pick
+          # AVX-512 / AVX2 / SSE2 at runtime, so the binary is safe on any x64 CPU.
+          # xxh_x86dispatch.c doesn't include its own header, so MSVC never marks the
+          # dispatch functions dllexport; export them explicitly via the linker.
+          # (GCC exports them anyway thanks to default symbol visibility.)
+          LINKER_FLAGS=""
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            for f in XXH_featureTest \
+                     XXH3_64bits_dispatch XXH3_64bits_withSeed_dispatch XXH3_64bits_withSecret_dispatch XXH3_64bits_update_dispatch \
+                     XXH3_128bits_dispatch XXH3_128bits_withSeed_dispatch XXH3_128bits_withSecret_dispatch XXH3_128bits_update_dispatch; do
+              LINKER_FLAGS="$LINKER_FLAGS -EXPORT:$f"   # '-' instead of '/' avoids MSYS path conversion
+            done
+          fi
           cmake -S external/xxHash/build/cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=ON \
-            -DXXHASH_BUILD_XXHSUM=OFF
+            -DXXHASH_BUILD_XXHSUM=OFF \
+            -DDISPATCH=ON \
+            "-DCMAKE_SHARED_LINKER_FLAGS=$LINKER_FLAGS"
           cmake --build build --config Release
           # On Linux libxxhash.so is a symlink chain; -L copies the real file.
           cp -L "${{ matrix.built }}" "Native/${{ matrix.target }}"
