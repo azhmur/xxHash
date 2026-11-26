@@ -25,10 +25,44 @@ public unsafe static class XXHash3
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
     private static ulong XXH3_len_0to16_64b(ref byte input, uint len, ulong seed)
     {
-        if (len > 8) return XXH3_len_9to16_64b(ref input, len, seed);
-        if (len >= 4) return XXH3_len_4to8_64b(ref input, len, seed);
+        if (len >= 4) return XXH3_len_4to16_64b(ref input, len, seed);
         if (len != 0) return XXH3_len_1to3_64b(ref input, len, seed);
         return XXHashShared.XXH64_avalanche(seed ^ XXHashShared.GetSecret64(56) ^ XXHashShared.GetSecret64(64));
+    }
+
+    // Branchless merge of XXH3_len_4to8_64b and XXH3_len_9to16_64b: both results are computed and
+    // one is selected with a mask, avoiding an unpredictable "len > 8" branch for random lengths.
+    // All loads are 4 bytes wide at offsets that are in bounds for any len >= 4.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+    private static ulong XXH3_len_4to16_64b(ref byte input, uint len, ulong seed)
+    {
+        ulong isLong = (ulong)((8L - len) >> 63); // all ones when len > 8
+        ulong is8Plus = (ulong)((7L - len) >> 63); // all ones when len >= 8
+
+        uint a = Unsafe.ReadUnaligned<uint>(ref input);
+        uint b = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref input, len - 4));
+        uint c = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref input, (nuint)(4 & is8Plus)));
+        uint d = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref input, (nuint)((len - 8) & is8Plus)));
+
+        // 9..16 (valid when len >= 8: lo == read64(input), hi == read64(input + len - 8))
+        ulong lo = a | ((ulong)c << 32);
+        ulong hi = d | ((ulong)b << 32);
+        ulong bitflip1 = (XXHashShared.GetSecret64(24) ^ XXHashShared.GetSecret64(32)) + seed;
+        ulong bitflip2 = (XXHashShared.GetSecret64(40) ^ XXHashShared.GetSecret64(48)) - seed;
+        ulong input_lo = lo ^ bitflip1;
+        ulong input_hi = hi ^ bitflip2;
+        ulong acc = len
+            + BinaryPrimitives.ReverseEndianness(input_lo) + input_hi
+            + XXHashShared.XXH3_mul128_fold64(input_lo, input_hi);
+        ulong longHash = XXHashShared.XXH3_avalanche(acc);
+
+        // 4..8
+        ulong seed2 = seed ^ ((ulong)BinaryPrimitives.ReverseEndianness((uint)seed) << 32);
+        ulong bitflip = (XXHashShared.GetSecret64(8) ^ XXHashShared.GetSecret64(16)) - seed2;
+        ulong input64 = b + ((ulong)a << 32);
+        ulong shortHash = XXHashShared.XXH3_rrmxmx(input64 ^ bitflip, len);
+
+        return shortHash ^ ((shortHash ^ longHash) & isLong);
     }
 
     ////XXH_FORCE_INLINE XXH_PUREF XXH64_hash_t
@@ -81,18 +115,7 @@ public unsafe static class XXHash3
     ////        return XXH3_rrmxmx(keyed, len);
     ////    }
     ////}
-
-    [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-    private static ulong XXH3_len_4to8_64b(ref byte input, uint len, ulong seed)
-    {
-        seed ^= (ulong)BinaryPrimitives.ReverseEndianness((uint)seed) << 32;
-        uint input1 = Unsafe.ReadUnaligned<uint>(ref input);
-        uint input2 = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref input, len - 4));
-        ulong bitflip = (XXHashShared.GetSecret64(8) ^ XXHashShared.GetSecret64(16)) - seed;
-        ulong input64 = input2 + (((ulong)input1) << 32);
-        ulong keyed = input64 ^ bitflip;
-        return XXHashShared.XXH3_rrmxmx(keyed, len);
-    }
+    //// (ported together with XXH3_len_9to16_64b as XXH3_len_4to16_64b)
 
     ////XXH_FORCE_INLINE XXH_PUREF XXH64_hash_t
     ////XXH3_len_9to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
@@ -110,19 +133,7 @@ public unsafe static class XXHash3
     ////        return XXH3_avalanche(acc);
     ////    }
     ////}
-
-    [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-    private static ulong XXH3_len_9to16_64b(ref byte input, uint len, ulong seed)
-    {
-        ulong bitflip1 = (XXHashShared.GetSecret64(24) ^ XXHashShared.GetSecret64(32)) + seed;
-        ulong bitflip2 = (XXHashShared.GetSecret64(40) ^ XXHashShared.GetSecret64(48)) - seed;
-        ulong input_lo = Unsafe.ReadUnaligned<ulong>(ref input) ^ bitflip1;
-        ulong input_hi = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref input, len - 8)) ^ bitflip2;
-        ulong acc = len
-            + BinaryPrimitives.ReverseEndianness(input_lo) + input_hi
-            + XXHashShared.XXH3_mul128_fold64(input_lo, input_hi);
-        return XXHashShared.XXH3_avalanche(acc);
-    }
+    //// (ported together with XXH3_len_4to8_64b as XXH3_len_4to16_64b)
 
     ////XXH_FORCE_INLINE void
     ////XXH3_scalarRound(void* XXH_RESTRICT acc,
@@ -520,20 +531,33 @@ public unsafe static class XXHash3
     private static ulong XXH3_len_17to128_64b(ref byte input, uint len, ulong seed)
     {
         ulong acc = len * XXHashShared.XXH_PRIME64_1;
-        if (len > 32) {
-            if (len > 64) {
-                if (len > 96) {
-                    acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, 48), 96, seed);
-                    acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 64), 112, seed);
-                }
-                acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, 32), 64, seed);
-                acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 48), 80, seed);
+        acc += XXHashShared.XXH3_mix16B(ref input, 0, seed);
+        acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 16), 16, seed);
+
+        if (len > 64)
+        {
+            if (len > 96)
+            {
+                acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, 48), 96, seed);
+                acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 64), 112, seed);
             }
+            acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, 32), 64, seed);
+            acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 48), 80, seed);
             acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, 16), 32, seed);
             acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 32), 48, seed);
         }
-        acc += XXHashShared.XXH3_mix16B(ref input, 0, seed);
-        acc += XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, len - 16), 16, seed);
+        else
+        {
+            // 17..64: the "len > 32" pair is computed unconditionally and masked out, because for
+            // random lengths that branch is unpredictable. For len <= 32 both reads are clamped
+            // to offset 0, which is always in bounds (len >= 17).
+            ulong mask = (ulong)((32L - len) >> 63);
+            nuint off1 = (nuint)(16 & mask);
+            nuint off2 = (nuint)((len - 32) & mask);
+            ulong extra = XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, off1), 32, seed)
+                        + XXHashShared.XXH3_mix16B(ref Unsafe.AddByteOffset(ref input, off2), 48, seed);
+            acc += extra & mask;
+        }
 
         return XXHashShared.XXH3_avalanche(acc);
     }
