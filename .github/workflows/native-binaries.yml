@@ -1,0 +1,95 @@
+name: Update native xxHash binaries
+
+# Rebuilds Native/xxhash.dll and Native/libxxhash.so from the external/xxHash submodule,
+# runs the managed-vs-native unit tests against the fresh binaries, and opens a PR with them.
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - external/xxHash
+      - .github/workflows/native-binaries.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            built: build/Release/xxhash.dll
+            target: xxhash.dll
+          - os: ubuntu-latest
+            built: build/libxxhash.so
+            target: libxxhash.so
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build xxHash shared library
+        shell: bash
+        run: |
+          cmake -S external/xxHash/build/cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DXXHASH_BUILD_XXHSUM=OFF
+          cmake --build build --config Release
+          # On Linux libxxhash.so is a symlink chain; -L copies the real file.
+          cp -L "${{ matrix.built }}" "Native/${{ matrix.target }}"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
+
+      - name: Test managed vs native
+        run: dotnet test UnitTests -c Release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: Native/${{ matrix.target }}
+          if-no-files-found: error
+
+  pull-request:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: Native
+          merge-multiple: true
+
+      - name: Read xxHash version
+        id: version
+        run: echo "tag=$(git -C external/xxHash describe --tags --always)" >> "$GITHUB_OUTPUT"
+
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: update-native-binaries
+          add-paths: |
+            Native/xxhash.dll
+            Native/libxxhash.so
+          commit-message: Update native xxHash binaries to ${{ steps.version.outputs.tag }}
+          title: Update native xxHash binaries to ${{ steps.version.outputs.tag }}
+          body: |
+            Rebuilt `Native/xxhash.dll` (windows-x64) and `Native/libxxhash.so` (linux-x64) from the
+            `external/xxHash` submodule at `${{ steps.version.outputs.tag }}`. Managed-vs-native unit
+            tests passed on both platforms against these binaries.
+
+            🤖 Generated with [Claude Code](https://claude.com/claude-code)
