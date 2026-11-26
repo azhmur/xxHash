@@ -17,7 +17,7 @@ public class ByteBlockTests
 {
     private ulong seed;
 
-    [Params(1,7,15)]
+    [Params(1 << 10, 1 << 15, 1 << 20)]
     public int length;
 
     public byte[] buffer;
@@ -41,7 +41,7 @@ public class ByteBlockTests
         return Standart.Hash.xxHash.xxHash64.ComputeHash(buffer, buffer.Length, seed);
     }
 
-    //[Benchmark]
+    [Benchmark]
     public ulong StandartXXHash3()
     {
         return Standart.Hash.xxHash.xxHash3.ComputeHash(buffer, buffer.Length, seed);
@@ -56,7 +56,7 @@ public class ByteBlockTests
     //[Benchmark]
     public ulong Wyhash() => WyHash.WyHash64.ComputeHash64(buffer, seed);
 
-    [Benchmark]
+    //[Benchmark]
     public ulong xxh3_64_Native() => XXHashNative.XXHash3_64(buffer, seed);
 
     //[Benchmark]

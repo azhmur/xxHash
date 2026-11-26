@@ -591,7 +591,7 @@ public unsafe static class XXHash3
     ////    }
     ////}
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
     private static ulong XXH3_len_129to240_64b(
         ref byte input,
         uint len,
